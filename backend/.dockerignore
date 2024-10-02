@@ -1,0 +1,12 @@
+# Python cache dosyalarını hariç tut
+__pycache__/
+*.pyc
+
+# Test dosyalarını hariç tut
+tests/
+
+# Ortam dosyasını hariç tut (güvenlik için)
+.env
+
+# Gerekli olmayan log dosyalarını hariç tut
+*.log
