@@ -216,7 +216,7 @@ resource "aws_instance" "master" {
   }
 # Ansible playbook ile master node kurulumu
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.public_ip},' Al-Aplication/Ansible/playbooks/master.yml"
+    command = "ansible-playbook -i '${self.public_ip},' AI-Aplication/Ansible/playbooks/master.yml"
   } 
   # # User Data - Shell Script ile Kurulum
   # user_data = file("setup.sh")
@@ -239,7 +239,7 @@ resource "aws_instance" "worker-1" {
   }
 # Ansible playbook ile worker node kurulumu
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.public_ip},' Al-Aplication/Ansible/playbooks/worker.yml"
+    command = "ansible-playbook -i '${self.public_ip},' AI-Aplication/Ansible/playbooks/worker.yml"
   }
   # # User Data - Shell Script ile Kurulum
   # user_data = file("setup.sh")
@@ -262,7 +262,7 @@ resource "aws_instance" "worker-2" {
   }
  # Ansible playbook ile worker node kurulumu
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.public_ip},' Al-Aplication/Ansible/playbooks/worker.yml"
+    command = "ansible-playbook -i '${self.public_ip},' AI-Aplication/Ansible/playbooks/worker.yml"
   }
   # # User Data - Shell Script ile Kurulum
   # user_data = file("setup.sh")
