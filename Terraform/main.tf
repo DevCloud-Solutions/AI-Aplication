@@ -204,49 +204,61 @@ resource "aws_security_group" "ec2-sec-grp" {
 
 # 8. EC2 Instance Oluşturma
 resource "aws_instance" "master" {
-  ami           = ami-0ebfd941bbafe70c6
+  ami           = "ami-0ebfd941bbafe70c6"
   instance_type = "t3a.medium"
   subnet_id     = aws_subnet.public-1.id
   security_groups = [aws_security_group.ec2-sec-grp.name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
 
-  # 30 GB EBS Volume
+
   root_block_device {
     volume_size = 30
-    
   }
-# Ansible playbook ile master node kurulumu
+
+  # Dinamik inventory dosyasını oluştur
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.public_ip},' AI-Aplication/Ansible/playbooks/master.yml"
-  } 
-  # # User Data - Shell Script ile Kurulum
-  # user_data = file("setup.sh")
+    command = <<EOT
+      echo "[master]" > ./inventory
+      echo "${self.public_ip}" >> ./inventory
+    EOT
+  }
+
+  provisioner "local-exec" {
+    command = "ansible-playbook -i ./inventory AI-Aplication/Ansible/playbooks/master_setup.yml"
+  }
 
   tags = {
     Name = "master"
-  }
+  }
 }
 
 resource "aws_instance" "worker-1" {
-  ami           = ami-0ebfd941bbafe70c6
+  ami           = "ami-0ebfd941bbafe70c6"
   instance_type = "t3a.medium"
   subnet_id     = aws_subnet.public-1.id
   security_groups = [aws_security_group.ec2-sec-grp.name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
 
-  # 30 GB EBS Volume
+
   root_block_device {
     volume_size = 30
-    
   }
-# Ansible playbook ile worker node kurulumu
+
+  # Worker node'ları inventory dosyasına ekle
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.public_ip},' AI-Aplication/Ansible/playbooks/worker.yml"
+    command = <<EOT
+      echo "[workers]" >> ./inventory
+      echo "${self.public_ip}" >> ./inventory
+    EOT
   }
-  # # User Data - Shell Script ile Kurulum
-  # user_data = file("setup.sh")
+
+  provisioner "local-exec" {
+    command = "ansible-playbook -i ./inventory AI-Aplication/Ansible/playbooks/worker_setup.yml"
+  }
 
   tags = {
     Name = "worker-1"
-  }
+  }
 }
 
 resource "aws_instance" "worker-2" {
@@ -254,15 +266,23 @@ resource "aws_instance" "worker-2" {
   instance_type = "t3a.medium"
   subnet_id     = aws_subnet.public-2.id
   security_groups = [aws_security_group.ec2-sec-grp.name]
+  iam_instance_profile = aws_iam_instance_profile.ec2_instance_profile.name
+
 
   # 30 GB EBS Volume
   root_block_device {
     volume_size = 30
     
   }
- # Ansible playbook ile worker node kurulumu
+ # Worker node'ları inventory dosyasına ekle
   provisioner "local-exec" {
-    command = "ansible-playbook -i '${self.public_ip},' AI-Aplication/Ansible/playbooks/worker.yml"
+    command = <<EOT
+      echo "${self.public_ip}" >> ./inventory
+    EOT
+  }
+
+  provisioner "local-exec" {
+    command = "ansible-playbook -i ./inventory AI-Aplication/Ansible/playbooks/worker_setup.yml"
   }
   # # User Data - Shell Script ile Kurulum
   # user_data = file("setup.sh")
@@ -326,5 +346,68 @@ resource "aws_security_group" "rds_security_group" {
   }
 }
 
+# AWS ECR Repository Oluşturma
+resource "aws_ecr_repository" "backend_repo" {
+  name = "backend-repo"
+}
 
+resource "aws_ecr_repository" "frontend_repo" {
+  name = "frontend-repo"
+}
+
+
+
+resource "aws_iam_role" "ec2_role" {
+  name = "ec2-ecr-role"
+
+  assume_role_policy = <<EOF
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "ec2.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  }
+  EOF
+}
+
+resource "aws_iam_policy" "ecr_policy" {
+  name = "ECRAccessPolicy"
+  policy = <<EOF
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+          "ecr:BatchCheckLayerAvailability"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Effect": "Allow",
+        "Action": "ecr:GetAuthorizationToken",
+        "Resource": "*"
+      }
+    ]
+  }
+  EOF
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = aws_iam_policy.ecr_policy.arn
+}
+
+resource "aws_iam_instance_profile" "ec2_instance_profile" {
+  name = "ec2_instance_profile"
+  role = aws_iam_role.ec2_role.name
+}
 

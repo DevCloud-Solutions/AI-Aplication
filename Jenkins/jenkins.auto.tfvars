@@ -1,6 +1,6 @@
 mykey = "test"
-ami = "ami-08a0d1e16fc3f61ea"
-region = "us-east-1"
+ami = "ami-0592c673f0b1e7665"
+region = "eu-central-1"
 instance_type = "t3a.medium"
 jenkins_server_secgr = "test-app-secgr"
 jenkins-server-tag = "Jenkins Server of test-app"

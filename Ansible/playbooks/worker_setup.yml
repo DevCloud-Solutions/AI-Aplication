@@ -1,0 +1,99 @@
+---
+- name: Kubernetes Worker Node Setup
+  hosts: worker
+  become: true
+  tasks:
+    - name: Upgrade all packages
+      ansible.builtin.yum: 
+        name: '*'
+        state: latest
+
+    - name: Remove docker if installed from CentOS repo
+      ansible.builtin.yum:
+        name:
+          - docker
+          - docker-client
+          - docker-client-latest
+          - docker-common
+          - docker-latest
+          - docker-latest-logrotate
+          - docker-logrotate
+          - docker-engine
+        state: removed
+
+    - name: Install yum utils
+      ansible.builtin.yum:
+        name: "yum-utils"
+        state: latest
+
+    - name: Add Docker repo
+      ansible.builtin.get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docker-ce.repo
+
+    - name: Install Docker
+      ansible.builtin.package:
+        name: docker-ce
+        state: latest
+
+    - name: Add user ec2-user to docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Start Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Enable bridge-nf-call-iptables and ip_forwarding for Kubernetes
+      ansible.builtin.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        sysctl_set: yes
+        state: present
+        reload: yes
+      loop:
+        - { name: 'net.bridge.bridge-nf-call-iptables', value: 1 }
+        - { name: 'net.bridge.bridge-nf-call-ip6tables', value: 1 }
+        - { name: 'net.ipv4.ip_forward', value: 1 }
+
+    - name: Ensure required kernel modules are loaded
+      ansible.builtin.command: modprobe br_netfilter
+
+    - name: Add Kubernetes YUM repository
+      ansible.builtin.yum_repository:
+        name: kubernetes
+        description: Kubernetes Repository
+        baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-x86_64
+        gpgcheck: 1
+        repo_gpgcheck: 1
+        enabled: 1
+        gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+
+    - name: Install Kubernetes packages (kubelet, kubeadm, kubectl)
+      ansible.builtin.yum:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        update_cache: yes
+
+    - name: Enable and start kubelet service
+      ansible.builtin.service:
+        name: kubelet
+        state: started
+        enabled: yes
+
+    - name: Retrieve Kubernetes join info from master
+      fetch:
+        src: /tmp/kubeadm_join_info.txt
+        dest: /tmp/kubeadm_join_info.txt
+        flat: yes
+
+    - name: Join worker nodes to the Kubernetes cluster
+      shell: |
+        $(cat /tmp/kubeadm_join_info.txt)

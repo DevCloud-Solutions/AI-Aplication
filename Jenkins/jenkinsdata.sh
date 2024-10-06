@@ -9,8 +9,8 @@ dnf install git -y
 wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
 rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
 dnf upgrade
-# install java 11
-dnf install fontconfig java-11-amazon-corretto -y
+# install java 12
+dnf install fontconfig java-17-amazon-corretto -y
 dnf install jenkins -y
 systemctl enable jenkins
 systemctl start jenkins

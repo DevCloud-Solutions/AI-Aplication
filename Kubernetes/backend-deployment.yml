@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment
+  labels:
+    app: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: ahmettgrbzz/backend:latest # Docker Hub veya ECR imajı
+        ports:
+        - containerPort: 5000
+        env:
+        - name: MYSQL_USER
+          value: "raife"
+        - name: MYSQL_PASSWORD
+          value: "123"
+        - name: MYSQL_DATABASE
+          value: "deid"

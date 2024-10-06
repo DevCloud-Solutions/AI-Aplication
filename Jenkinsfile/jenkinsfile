@@ -1,0 +1,98 @@
+pipeline {
+    agent any
+
+    environment {
+        AWS_REGION = 'eu-central-1'
+        BACKEND_REPO_NAME = 'backend-repo'
+        FRONTEND_REPO_NAME = 'frontend-repo'
+        IMAGE_TAG = 'latest'
+    }
+
+    stages {
+        stage('Clone Backend Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/DevCloud-Solutions/AI-Aplication/backend.git'
+            }
+        }
+
+        stage('Build Backend Docker Image') {
+            steps {
+                script {
+                    // Backend Docker imajını oluştur
+                    sh 'docker build -t ${BACKEND_REPO_NAME}:${IMAGE_TAG} .'
+                }
+            }
+        }
+
+        stage('Clone Frontend Repository') {
+            steps {
+                git branch: 'main', url: 'https://github.com/DevCloud-Solutions/AI-Aplication/frontend.git'
+            }
+        }
+
+        stage('Build Frontend Docker Image') {
+            steps {
+                script {
+                    // Frontend Docker imajını oluştur
+                    sh 'docker build -t ${FRONTEND_REPO_NAME}:${IMAGE_TAG} .'
+                }
+            }
+        }
+
+        stage('Login to AWS ECR') {
+            environment {
+                AWS_CREDENTIALS = credentials('aws-credentials')
+            }
+            steps {
+                script {
+                    // AWS ECR login
+                    sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com'
+                }
+            }
+        }
+
+        stage('Tag and Push Backend Docker Image') {
+            steps {
+                script {
+                    // Backend Docker imajını tag'le ve ECR'a push et
+                    sh 'docker tag ${BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO_NAME}:${IMAGE_TAG}'
+                    sh 'docker push ${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO_NAME}:${IMAGE_TAG}'
+                }
+            }
+        }
+
+        stage('Tag and Push Frontend Docker Image') {
+            steps {
+                script {
+                    // Frontend Docker imajını tag'le ve ECR'a push et
+                    sh 'docker tag ${FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO_NAME}:${IMAGE_TAG}'
+                    sh 'docker push ${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO_NAME}:${IMAGE_TAG}'
+                }
+            }
+        }
+
+        stage('Deploy Backend to Kubernetes') {
+            steps {
+                script {
+                    // Kubernetes backend deployment'ı güncelle
+                    sh 'kubectl set image deployment/backend-deployment backend=${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO_NAME}:${IMAGE_TAG}'
+                }
+            }
+        }
+
+        stage('Deploy Frontend to Kubernetes') {
+            steps {
+                script {
+                    // Kubernetes frontend deployment'ı güncelle
+                    sh 'kubectl set image deployment/frontend-deployment frontend=${AWS_CREDENTIALS_USR}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO_NAME}:${IMAGE_TAG}'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs()
+        }
+    }
+}
