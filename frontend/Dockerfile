@@ -4,7 +4,7 @@
 FROM nginx:alpine
 
 # Nginx'in varsayılan ayar dosyasını silip kendi ayarlarımızı ekliyoruz
-COPY ./nginx.conf /etc/nginx/nginx.conf
+COPY frontend/nginx.conf /etc/nginx/nginx.conf
 
 # Statik dosyaları Nginx sunucusuna kopyala
 COPY . /usr/share/nginx/html
