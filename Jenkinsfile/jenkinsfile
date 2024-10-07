@@ -42,7 +42,7 @@ pipeline {
             steps {
                 dir("${TERRAFORM_DIR}") {
                     script {
-                        sh 'terraform apply -auto-approve tfplan'
+                        sh 'terraform destroy -auto-approve tfplan'
                     }
                 }
             }
