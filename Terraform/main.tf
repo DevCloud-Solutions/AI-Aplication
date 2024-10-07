@@ -77,7 +77,7 @@ resource "aws_route_table_association" "public-2-association" {
 }
 
 resource "aws_eip" "nat_eip" {
-  vpc = true
+  domain = "vpc"
 }
 
 resource "aws_nat_gateway" "nat_gw" {
@@ -220,13 +220,12 @@ resource "aws_db_instance" "default" {
   skip_final_snapshot  = true
   publicly_accessible  = false
   port                 = 3306
-  subnet_group_name    = aws_db_subnet_group.rds_subnet_group.name
-  vpc_security_group_ids = [aws_security_group.rds_security_group.id]
 
-  tags = {
-    Name = "MySQL-DB"
-  }
+  db_subnet_group_name = aws_db_subnet_group.rds_subnet_group.name
+
+  vpc_security_group_ids = [aws_security_group.rds_security_group.id]
 }
+
 
 resource "aws_security_group" "rds_security_group" {
   name        = "rds-sg"
