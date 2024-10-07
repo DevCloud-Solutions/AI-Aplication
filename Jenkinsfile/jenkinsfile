@@ -18,15 +18,15 @@ pipeline {
             }
         }
 
-        // stage('Terraform Init') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             script {
-        //                 sh 'terraform init'
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Terraform Init') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        sh 'terraform init'
+                    }
+                }
+            }
+        }
 
         // stage('Terraform Plan') {
         //     steps {
