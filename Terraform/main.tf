@@ -9,7 +9,7 @@ terraform {
 
 # Configure the AWS Provider
 provider "aws" {
-  region = "us-east-1"
+  region = "eu-central-1"
 }
 
 resource "aws_vpc" "test-app-vpc" {
@@ -24,7 +24,7 @@ resource "aws_vpc" "test-app-vpc" {
 resource "aws_subnet" "public-1" {
   vpc_id            = aws_vpc.test-app-vpc.id
   cidr_block        = "10.90.10.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = "eu-central-1a"
   tags = {
     Name = "public-1"
   }
@@ -33,7 +33,7 @@ resource "aws_subnet" "public-1" {
 resource "aws_subnet" "public-2" {
   vpc_id            = aws_vpc.test-app-vpc.id
   cidr_block        = "10.90.20.0/24"
-  availability_zone = "us-east-1b"
+  availability_zone = "eu-central-1b"
   tags = {
     Name = "public-2"
   }
@@ -42,7 +42,7 @@ resource "aws_subnet" "public-2" {
 resource "aws_subnet" "private-1" {
   vpc_id            = aws_vpc.test-app-vpc.id
   cidr_block        = "10.90.11.0/24"
-  availability_zone = "us-east-1a"
+  availability_zone = "eu-central-1a"
   tags = {
     Name = "private-1"
   }
