@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ahmettgrbzz/backend:latest # Docker Hub veya ECR imajı
+        image: 891377165332.dkr.ecr.eu-central-1.amazonaws.com/backend-repo:latest  # ECR repository ile uyumlu hale getirildi
         ports:
         - containerPort: 5000
         env:
@@ -26,3 +26,7 @@ spec:
           value: "123"
         - name: MYSQL_DATABASE
           value: "deid"
+        - name: MYSQL_HOST
+          value: "mysql-service"  # MySQL service ile bağlantı kuracak
+        - name: MYSQL_PORT
+          value: "3306"

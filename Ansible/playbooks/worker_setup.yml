@@ -8,7 +8,7 @@
         name: '*'
         state: latest
 
-    - name: Remove docker if installed from CentOS repo
+    - name: Remove Docker if installed from CentOS repo
       ansible.builtin.yum:
         name:
           - docker
@@ -61,7 +61,9 @@
         - { name: 'net.ipv4.ip_forward', value: 1 }
 
     - name: Ensure required kernel modules are loaded
-      ansible.builtin.command: modprobe br_netfilter
+      ansible.builtin.command:
+        cmd: modprobe br_netfilter
+        warn: false  # Komut başarısız olursa uyarı gösterme
 
     - name: Add Kubernetes YUM repository
       ansible.builtin.yum_repository:
@@ -97,3 +99,5 @@
     - name: Join worker nodes to the Kubernetes cluster
       shell: |
         $(cat /tmp/kubeadm_join_info.txt)
+      args:
+        warn: false  # Uyarıları gizle
