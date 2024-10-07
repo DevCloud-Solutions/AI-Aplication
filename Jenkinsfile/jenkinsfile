@@ -47,7 +47,8 @@ pipeline {
                 }
             }
         }
-
+    }
+}
 //         stage('Generate Ansible Inventory') {
 //             steps {
 //                 dir("${TERRAFORM_DIR}") {
