@@ -25,6 +25,6 @@ spec:
         - name: MYSQL_USER
           value: "raife"
         - name: MYSQL_PASSWORD
-          value: "123"
+          value: "123123123"
         - name: MYSQL_DATABASE
           value: "deid"
