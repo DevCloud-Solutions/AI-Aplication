@@ -169,7 +169,7 @@ resource "aws_security_group" "ec2-sec-grp" {
   }
 }
 
-resource "aws_instance" "master" {
+resource "aws_instance" "mastertest" {
   ami                    = "ami-0ebfd941bbafe70c6"
   instance_type          = "t3a.medium"
   key_name               = "test"
@@ -186,7 +186,7 @@ resource "aws_instance" "master" {
   }
 }
 
-resource "aws_instance" "workerone" {
+resource "aws_instance" "workeronetest" {
   ami                    = "ami-0ebfd941bbafe70c6"
   instance_type          = "t3a.medium"
   key_name               = "test"
@@ -203,7 +203,7 @@ resource "aws_instance" "workerone" {
   }
 }
 
-resource "aws_instance" "workertwo" {
+resource "aws_instance" "workertwotest" {
   ami                    = "ami-0ebfd941bbafe70c6"
   instance_type          = "t3a.medium"
   key_name               = "test"
@@ -235,7 +235,7 @@ resource "aws_db_instance" "default" {
   engine_version       = "8.0"
   instance_class       = "db.t3.micro"
   username             = "raife"
-  password             = "123"
+  password             = "123123123"
   parameter_group_name = "default.mysql8.0"
   skip_final_snapshot  = true
   publicly_accessible  = false
@@ -335,16 +335,16 @@ resource "aws_iam_instance_profile" "ec2_instance_profile_new" {
 }
 
 output "master_public_ip" {
-  value = aws_instance.master.public_ip
+  value = aws_instance.mastertest.public_ip
   description = "Public IP address of the master instance"
 }
 
 output "workerone_public_ip" {
-  value = aws_instance.workerone.public_ip
+  value = aws_instance.workeronetest.public_ip
   description = "Public IP address of the first worker instance"
 }
 
 output "workertwo_public_ip" {
-  value = aws_instance.workertwo.public_ip
+  value = aws_instance.workertwotest.public_ip
   description = "Public IP address of the second worker instance"
 }
