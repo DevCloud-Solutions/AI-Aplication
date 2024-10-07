@@ -48,6 +48,17 @@ resource "aws_subnet" "private-1" {
   }
 }
 
+resource "aws_subnet" "private-2" {
+  vpc_id            = aws_vpc.test-app-vpc.id
+  cidr_block        = "10.90.12.0/24"
+  availability_zone = "eu-central-1b"
+
+  tags = {
+    Name = "private-2"
+  }
+}
+
+
 resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.test-app-vpc.id
   tags = {
@@ -103,7 +114,10 @@ resource "aws_route_table_association" "private-1-association" {
   subnet_id      = aws_subnet.private-1.id
   route_table_id = aws_route_table.private.id
 }
-
+resource "aws_route_table_association" "private-2-association" {
+  subnet_id      = aws_subnet.private-2.id
+  route_table_id = aws_route_table.private.id
+}
 resource "aws_security_group" "ec2-sec-grp" {
   name        = "ec2-sec-grp"
   description = "Security group for EC2 instances"
@@ -126,6 +140,12 @@ resource "aws_security_group" "ec2-sec-grp" {
   ingress {
     from_port   = 443
     to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 3000
+    to_port     = 3000
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
@@ -155,7 +175,7 @@ resource "aws_instance" "master" {
   key_name               = "test"
   subnet_id              = aws_subnet.public-1.id
   security_groups        = [aws_security_group.ec2-sec-grp.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_new.name
 
   root_block_device {
     volume_size = 30
@@ -172,7 +192,7 @@ resource "aws_instance" "workerone" {
   key_name               = "test"
   subnet_id              = aws_subnet.public-1.id
   security_groups        = [aws_security_group.ec2-sec-grp.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_new.name
 
   root_block_device {
     volume_size = 30
@@ -189,7 +209,7 @@ resource "aws_instance" "workertwo" {
   key_name               = "test"
   subnet_id              = aws_subnet.public-2.id
   security_groups        = [aws_security_group.ec2-sec-grp.id]
-  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile.name
+  iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_new.name
 
   root_block_device {
     volume_size = 30
@@ -202,7 +222,7 @@ resource "aws_instance" "workertwo" {
 
 resource "aws_db_subnet_group" "rds_subnet_group" {
   name       = "rds-subnet-group"
-  subnet_ids = [aws_subnet.private-1.id]
+  subnet_ids = [aws_subnet.private-1.id, aws_subnet.private-2.id]
   tags = {
     Name = "RDS subnet group"
   }
@@ -309,8 +329,8 @@ resource "aws_iam_role_policy_attachment" "ec2_role_policy_attachment" {
   policy_arn = aws_iam_policy.ecr_policy.arn
 }
 
-resource "aws_iam_instance_profile" "ec2_instance_profile" {
-  name = "ec2_instance_profile"
+resource "aws_iam_instance_profile" "ec2_instance_profile_new" {
+  name = "ec2_instance_profile_new"
   role = aws_iam_role.ec2_role.name
 }
 
