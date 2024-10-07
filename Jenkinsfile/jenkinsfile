@@ -8,6 +8,7 @@ pipeline {
         ECR_FRONTEND_REPO_NAME = 'frontend-repo'
         IMAGE_TAG = 'latest'
         ANSIBLE_INVENTORY = 'inventory'
+        TERRAFORM_DIR = 'Terraform' // Terraform dosyalarının olduğu dizin
     }
 
     stages {
@@ -19,38 +20,43 @@ pipeline {
 
         stage('Terraform Init') {
             steps {
-                script {
-                    sh 'terraform init'
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        sh 'terraform init'
+                    }
                 }
             }
         }
 
         stage('Terraform Plan') {
             steps {
-                script {
-                    sh 'terraform plan -out=tfplan'
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        sh 'terraform plan -out=tfplan'
+                    }
                 }
             }
         }
 
         stage('Terraform Apply') {
             steps {
-                script {
-                    sh 'terraform apply -auto-approve tfplan'
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        sh 'terraform apply -auto-approve tfplan'
+                    }
                 }
             }
         }
 
         stage('Generate Ansible Inventory') {
-    steps {
-        script {
-            // Fetch the public IPs from Terraform outputs
-            def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-            def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-            def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
-            
-            // Generate the Ansible inventory file dynamically
-            writeFile file: 'inventory', text: """
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+                        
+                        writeFile file: 'inventory', text: """
 [master]
 ${master_ip}
 
@@ -58,17 +64,16 @@ ${master_ip}
 ${workerone_ip}
 ${workertwo_ip}
 """
+                    }
+                }
+            }
         }
-    }
-}
-
 
         stage('Run Ansible Playbooks') {
             steps {
                 script {
-                    // Run Ansible playbooks
-                    sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} playbooks/master_setup.yml'
-                    sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} playbooks/worker_setup.yml'
+                    sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
+                    sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
                 }
             }
         }
