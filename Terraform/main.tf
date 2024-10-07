@@ -169,13 +169,14 @@ resource "aws_security_group" "ec2-sec-grp" {
   }
 }
 
-resource "aws_instance" "mastertest" {
-  ami                    = "ami-0ebfd941bbafe70c6"
+resource "aws_instance" "master" {
+  ami                    = "ami-0592c673f0b1e7665"
   instance_type          = "t3a.medium"
   key_name               = "test"
   subnet_id              = aws_subnet.public-1.id
   security_groups        = [aws_security_group.ec2-sec-grp.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_new.name
+  associate_public_ip_address = true
 
   root_block_device {
     volume_size = 30
@@ -186,13 +187,14 @@ resource "aws_instance" "mastertest" {
   }
 }
 
-resource "aws_instance" "workeronetest" {
-  ami                    = "ami-0ebfd941bbafe70c6"
+resource "aws_instance" "workerone" {
+  ami                    = "ami-0592c673f0b1e7665"
   instance_type          = "t3a.medium"
   key_name               = "test"
   subnet_id              = aws_subnet.public-1.id
   security_groups        = [aws_security_group.ec2-sec-grp.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_new.name
+  associate_public_ip_address = true
 
   root_block_device {
     volume_size = 30
@@ -203,13 +205,14 @@ resource "aws_instance" "workeronetest" {
   }
 }
 
-resource "aws_instance" "workertwotest" {
-  ami                    = "ami-0ebfd941bbafe70c6"
+resource "aws_instance" "workertwo" {
+  ami                    = "ami-0592c673f0b1e7665"
   instance_type          = "t3a.medium"
   key_name               = "test"
   subnet_id              = aws_subnet.public-2.id
   security_groups        = [aws_security_group.ec2-sec-grp.id]
   iam_instance_profile   = aws_iam_instance_profile.ec2_instance_profile_new.name
+  associate_public_ip_address = true
 
   root_block_device {
     volume_size = 30
@@ -335,16 +338,16 @@ resource "aws_iam_instance_profile" "ec2_instance_profile_new" {
 }
 
 output "master_public_ip" {
-  value = aws_instance.mastertest.public_ip
+  value = aws_instance.master.public_ip
   description = "Public IP address of the master instance"
 }
 
 output "workerone_public_ip" {
-  value = aws_instance.workeronetest.public_ip
+  value = aws_instance.workerone.public_ip
   description = "Public IP address of the first worker instance"
 }
 
 output "workertwo_public_ip" {
-  value = aws_instance.workertwotest.public_ip
+  value = aws_instance.workertwo.public_ip
   description = "Public IP address of the second worker instance"
 }
