@@ -14,7 +14,7 @@ pipeline {
     stages {
         stage('Checkout Terraform and Ansible Code') {
             steps {
-                git branch: 'dev', url: 'https://github.com/DevCloud-Solutions/AI-Aplication.git'
+                git branch: 'dev', url: 'https://github.com/DevCloud-Solutions/AI-Application.git'
             }
         }
 
