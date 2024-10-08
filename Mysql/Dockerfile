@@ -9,7 +9,7 @@ ENV MYSQL_DATABASE=deid
 
 # İsteğe bağlı olarak özel bir kullanıcı ekliyoruz
 ENV MYSQL_USER=raife
-ENV MYSQL_PASSWORD=123
+ENV MYSQL_PASSWORD=123123123
 
 # İsteğe bağlı olarak SQL dump dosyalarını kullanarak başlangıç verisi yükleyebilirsiniz
 # Eğer SQL dump dosyalarınız varsa, aşağıdaki satırları kullanabilirsiniz:

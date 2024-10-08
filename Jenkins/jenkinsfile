@@ -48,71 +48,71 @@ pipeline {
         //     }
         // }
 
-        stage('Generate Ansible Inventory') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    script {
-                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+//         stage('Generate Ansible Inventory') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     script {
+//                         def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+//                         def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+//                         def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
                         
-                        writeFile file: 'inventory', text: """
-[master]
-${master_ip}
+//                         writeFile file: 'inventory', text: """
+// [master]
+// ${master_ip}
 
-[workers]
-${workerone_ip}
-${workertwo_ip}
-"""
-                    }
-                }
-            }
-        }
+// [workers]
+// ${workerone_ip}
+// ${workertwo_ip}
+// """
+//                     }
+//                 }
+//             }
+//         }
 
-        stage('Run Ansible Playbooks') {
-            steps {
-                script {
-                    sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
-                    sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
-                }
-            }
-        }
+//         stage('Run Ansible Playbooks') {
+//             steps {
+//                 script {
+//                     sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
+//                     sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
+//                 }
+//             }
+//         }
 
-        stage('Build Backend Docker Image') {
-            steps {
-                script {
-                    sh 'docker build -t ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} -f backend/Dockerfile .'
-                }
-            }
-        }
+//         stage('Build Backend Docker Image') {
+//             steps {
+//                 script {
+//                     sh 'docker build -t ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} -f backend/Dockerfile .'
+//                 }
+//             }
+//         }
 
-        stage('Build Frontend Docker Image') {
-            steps {
-                script {
-                    sh 'docker build -t ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} -f frontend/Dockerfile .'
-                }
-            }
-        }
+//         stage('Build Frontend Docker Image') {
+//             steps {
+//                 script {
+//                     sh 'docker build -t ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} -f frontend/Dockerfile .'
+//                 }
+//             }
+//         }
 
-        stage('Login to AWS ECR') {
-            steps {
-                script {
-                    sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com'
-                }
-            }
-        }
+//         stage('Login to AWS ECR') {
+//             steps {
+//                 script {
+//                     sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com'
+//                 }
+//             }
+//         }
 
-        stage('Tag and Push Docker Images to ECR') {
-            steps {
-                script {
-                    sh 'docker tag ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
-                    sh 'docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
+//         stage('Tag and Push Docker Images to ECR') {
+//             steps {
+//                 script {
+//                     sh 'docker tag ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
+//                     sh 'docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
 
-                    sh 'docker tag ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
-                    sh 'docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
-                }
-            }
-        }
+//                     sh 'docker tag ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
+//                     sh 'docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
+//                 }
+//             }
+//         }
 
         stage('Deploy to Kubernetes') {
             steps {
