@@ -92,11 +92,11 @@
       shell: |
         kubeadm init --pod-network-cidr=10.244.0.0/16
 
-    # - name: Copy Kubeconfig to user directory
-    #   command: >
-    #     mkdir -p /home/ec2-user/.kube &&
-    #     cp /etc/kubernetes/admin.conf /home/ec2-user/.kube/config &&
-    #     chown ec2-user:ec2-user /home/ec2-user/.kube/config
+    - name: Copy Kubeconfig to user directory
+      command: >
+        mkdir -p /home/ec2-user/.kube &&
+        cp /etc/kubernetes/admin.conf /home/ec2-user/.kube/config &&
+        chown ec2-user:ec2-user /home/ec2-user/.kube/config
 
     - name: Deploy Flannel network plugin
       shell: kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml

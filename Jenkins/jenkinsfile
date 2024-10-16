@@ -9,7 +9,7 @@ pipeline {
         IMAGE_TAG = 'latest'
         ANSIBLE_INVENTORY = 'inventory'
         TERRAFORM_DIR = 'Terraform'
-         KUBECONFIG_PATH = '/tmp/kubeconfig'  // Kubeconfig dosyası buradan alınacak
+         KUBECONFIG_PATH = '/home/ec2-user/.kube/config'  // Kubeconfig dosyası buradan alınacak
     }
 
     stages {
@@ -56,13 +56,13 @@ ${workertwo_ip}
             }
         }
 
-        stage('Create Kubeconfig with Ansible') {
-            steps {
-                script {
-                    sh 'ansible-playbook Ansible/playbooks/create-kubeconfig.yml'
-                }
-            }
-        }
+        // stage('Create Kubeconfig with Ansible') {
+        //     steps {
+        //         script {
+        //             sh 'ansible-playbook Ansible/playbooks/create-kubeconfig.yml'
+        //         }
+        //     }
+        // }
 
         stage('Build and Push Docker Images') {
             steps {
