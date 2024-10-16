@@ -19,14 +19,14 @@ pipeline {
             }
         }
 
-        stage('Setup Infrastructure with Terraform') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform init'
-                    sh 'terraform apply -auto-approve'
-                }
-            }
-        }
+        // stage('Setup Infrastructure with Terraform') {
+        //     steps {
+        //         dir("${TERRAFORM_DIR}") {
+        //             sh 'terraform init'
+        //             sh 'terraform apply -auto-approve'
+        //         }
+        //     }
+        // }
 
         stage('Generate Ansible Inventory') {
             steps {
