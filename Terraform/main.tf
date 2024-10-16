@@ -387,7 +387,7 @@ resource "kubernetes_cluster_role_binding" "jenkins" {
     kind      = "ClusterRole"
     name      = "cluster-admin"
   }
-  subjects {
+  subject {  # "subjects" yerine "subject" kullanıldı
     kind      = "ServiceAccount"
     name      = kubernetes_service_account.jenkins.metadata[0].name
     namespace = "default"
@@ -395,6 +395,7 @@ resource "kubernetes_cluster_role_binding" "jenkins" {
 }
 
 output "jenkins_service_account" {
-  value = kubernetes_service_account.jenkins.metadata[0].name
+  value       = kubernetes_service_account.jenkins.metadata[0].name
   description = "Name of the Jenkins ServiceAccount"
 }
+
