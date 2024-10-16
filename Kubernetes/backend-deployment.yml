@@ -30,3 +30,15 @@ spec:
           value: "mysql-service"  # MySQL service ile bağlantı kuracak
         - name: MYSQL_PORT
           value: "3306"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 5
+          periodSeconds: 5

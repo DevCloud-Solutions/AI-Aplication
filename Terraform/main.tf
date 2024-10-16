@@ -249,6 +249,21 @@ resource "aws_db_instance" "default" {
   vpc_security_group_ids = [aws_security_group.rds_security_group.id]
 }
 
+resource "kubernetes_persistent_volume_claim" "mysql_pvc" {
+  metadata {
+    name = "mysql-pvc"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "5Gi"
+      }
+    }
+  }
+}
+
+
 
 resource "aws_security_group" "rds_security_group" {
   name        = "rds-sg"

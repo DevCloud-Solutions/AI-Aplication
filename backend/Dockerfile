@@ -9,11 +9,11 @@ WORKDIR /app
 # Dockerize aracını yükleme:
 # Dockerize, MySQL gibi servislerin tam olarak başlamasını beklemek için kullanılır.
 # Aşağıdaki komutlar ile dockerize aracını indiriyoruz ve kuruyoruz.
-# RUN dnf install -y wget \
-#     && wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz \
-#     && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz \
-#     && chmod +x /usr/local/bin/dockerize \
-#     && rm dockerize-linux-amd64-v0.6.1.tar.gz
+RUN dnf install -y wget \
+    && wget https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-v0.6.1.tar.gz \
+    && chmod +x /usr/local/bin/dockerize \
+    && rm dockerize-linux-amd64-v0.6.1.tar.gz
 
 #############################  DOCKERİZE KOMUTU AÇIKLAMASI  ##############################
 # 1. RUN Komutu:
@@ -67,12 +67,12 @@ ENV FLASK_APP=app.py
 # Buna yardımcı olacak bir bekleme scripti kullanabiliriz, bu opsiyoneldir.
 
 # Flask uygulamasını çalıştır
-CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
+# CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
 
 ######### MySQL servisi başlamadan önce bekleme:(dockerize)######## 
 # 'dockerize' aracını kullanarak MySQL'in 3306 portunda hazır olup olmadığını bekliyoruz.
 # Bu, MySQL gibi bağımlı servislerin başlama süresine göre uygulamanızın hata almadan çalışmasını sağlar.
-# CMD ["dockerize", "-wait", "tcp://mysql:3306", "-timeout", "30s", "flask", "run", "--host=0.0.0.0", "--port=5000"]
+CMD ["dockerize", "-wait", "tcp://mysql:3306", "-timeout", "30s", "flask", "run", "--host=0.0.0.0", "--port=5000"]
 
 # dockerize ile MySQL servisinin başlamasını beklemek:
 # CMD komutunda, dockerize aracını kullanarak tcp://mysql:3306 portunun açılmasını bekliyoruz.

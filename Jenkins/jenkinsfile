@@ -8,7 +8,7 @@ pipeline {
         ECR_FRONTEND_REPO_NAME = 'frontend-repo'
         IMAGE_TAG = 'latest'
         ANSIBLE_INVENTORY = 'inventory'
-        TERRAFORM_DIR = 'Terraform' // Terraform dosyalarının olduğu dizin
+        TERRAFORM_DIR = 'Terraform'
     }
 
     stages {
@@ -18,130 +18,101 @@ pipeline {
             }
         }
 
-        // stage('Terraform Init') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             script {
-        //                 sh 'terraform init'
-        //             }
-        //         }
-        //     }
-        // }
-
-        // stage('Terraform Plan') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             script {
-        //                 sh 'terraform plan -out=tfplan'
-        //             }
-        //         }
-        //     }
-        // }
-
-        // stage('Terraform Apply') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             script {
-        //                 sh 'terraform apply -auto-approve tfplan'
-        //             }
-        //         }
-        //     }
-        // }
-
-//         stage('Generate Ansible Inventory') {
-//             steps {
-//                 dir("${TERRAFORM_DIR}") {
-//                     script {
-//                         def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-//                         def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-//                         def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
-                        
-//                         writeFile file: 'inventory', text: """
-// [master]
-// ${master_ip}
-
-// [workers]
-// ${workerone_ip}
-// ${workertwo_ip}
-// """
-//                     }
-//                 }
-//             }
-//         }
-
-//         stage('Run Ansible Playbooks') {
-//             steps {
-//                 script {
-//                     sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
-//                     sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
-//                 }
-//             }
-//         }
-
-//         stage('Build Backend Docker Image') {
-//             steps {
-//                 script {
-//                     sh 'docker build -t ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} -f backend/Dockerfile .'
-//                 }
-//             }
-//         }
-
-//         stage('Build Frontend Docker Image') {
-//             steps {
-//                 script {
-//                     sh 'docker build -t ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} -f frontend/Dockerfile .'
-//                 }
-//             }
-//         }
-
-//         stage('Login to AWS ECR') {
-//             steps {
-//                 script {
-//                     sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com'
-//                 }
-//             }
-//         }
-
-//         stage('Tag and Push Docker Images to ECR') {
-//             steps {
-//                 script {
-//                     sh 'docker tag ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
-//                     sh 'docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
-
-//                     sh 'docker tag ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
-//                     sh 'docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
-//                 }
-//             }
-//         }
-
-        stage('Deploy to Kubernetes') {
+        stage('Terraform Init') {
             steps {
-                script {
-                    sh 'kubectl set image deployment/backend-deployment backend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}'
-                    sh 'kubectl set image deployment/frontend-deployment frontend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}'
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform init'
                 }
             }
         }
 
-        // stage('Terraform Destroy on Failure') {
-        //     when {
-        //         expression {
-        //             currentBuild.result == 'FAILURE'
-        //         }
-        //     }
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             script {
-        //                 sh 'terraform destroy -auto-approve'
-        //             }
-        //         }
-        //     }
-        // }
+        stage('Terraform Plan') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform plan -out=tfplan'
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform apply -auto-approve tfplan'
+                }
+            }
+        }
+
+        stage('Generate Ansible Inventory') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+
+                        writeFile file: 'inventory', text: """
+[master]
+${master_ip}
+
+[workers]
+${workerone_ip}
+${workertwo_ip}
+"""
+                    }
+                }
+            }
+        }
+
+        stage('Run Ansible Playbooks') {
+            steps {
+                sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
+                sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
+            }
+        }
+
+        stage('Build and Push Docker Images') {
+            steps {
+                script {
+                    sh '''
+                    docker build -t ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} -f backend/Dockerfile .
+                    docker build -t ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} -f frontend/Dockerfile .
+
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+                    docker tag ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
+                    docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
+
+                    docker tag ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
+                    docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+                    script {
+                        sh '''
+                        kubectl set image deployment/backend-deployment backend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
+                        kubectl set image deployment/frontend-deployment frontend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
+                        kubectl rollout status deployment/backend-deployment
+                        kubectl rollout status deployment/frontend-deployment
+                        '''
+                    }
+                }
+            }
+        }
     }
 
     post {
         always {
             cleanWs()
+        }
+        failure {
+            dir("${TERRAFORM_DIR}") {
+                sh 'terraform destroy -auto-approve'
+            }
         }
     }
 }
