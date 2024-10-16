@@ -9,7 +9,7 @@ pipeline {
         IMAGE_TAG = 'latest'
         ANSIBLE_INVENTORY = 'inventory'
         TERRAFORM_DIR = 'Terraform'
-        KUBECONFIG_PATH = '/tmp/kubeconfig'
+         KUBECONFIG_PATH = '/tmp/kubeconfig'  // Kubeconfig dosyası buradan alınacak
     }
 
     stages {
@@ -88,8 +88,9 @@ ${workertwo_ip}
         script {
             withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
                 sh '''
-                echo $PATH  # PATH'i doğrulamak için
-                kubectl version --client  # Kubectl erişimini doğrulamak için
+                echo "PATH: $PATH"  # PATH kontrolü
+                echo "Kubeconfig path: $KUBECONFIG"  # Kubeconfig doğrulama
+                kubectl version --client  # Kubectl erişimini kontrol et
                 kubectl apply -f kubernetes/backend-deployment.yaml
                 kubectl apply -f kubernetes/frontend-deployment.yaml
                 kubectl rollout status deployment/backend-deployment
