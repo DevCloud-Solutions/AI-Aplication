@@ -18,29 +18,29 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform init'
-                }
-            }
-        }
+        // stage('Terraform Init') {
+        //     steps {
+        //         dir("${TERRAFORM_DIR}") {
+        //             sh 'terraform init'
+        //         }
+        //     }
+        // }
 
-        stage('Terraform Plan') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
+        // stage('Terraform Plan') {
+        //     steps {
+        //         dir("${TERRAFORM_DIR}") {
+        //             sh 'terraform plan -out=tfplan'
+        //         }
+        //     }
+        // }
 
-        stage('Terraform Apply') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
+        // stage('Terraform Apply') {
+        //     steps {
+        //         dir("${TERRAFORM_DIR}") {
+        //             sh 'terraform apply -auto-approve tfplan'
+        //         }
+        //     }
+        // }
 
         stage('Generate Ansible Inventory') {
             steps {
