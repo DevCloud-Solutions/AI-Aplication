@@ -84,19 +84,22 @@ ${workertwo_ip}
         }
 
         stage('Deploy to Kubernetes') {
-            steps {
-                script {
-                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
-                        sh '''
-                        kubectl apply -f kubernetes/backend-deployment.yaml
-                        kubectl apply -f kubernetes/frontend-deployment.yaml
-                        kubectl rollout status deployment/backend-deployment
-                        kubectl rollout status deployment/frontend-deployment
-                        '''
-                    }
-                }
+    steps {
+        script {
+            withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
+                sh '''
+                echo $PATH  # PATH'i doğrulamak için
+                kubectl version --client  # Kubectl erişimini doğrulamak için
+                kubectl apply -f kubernetes/backend-deployment.yaml
+                kubectl apply -f kubernetes/frontend-deployment.yaml
+                kubectl rollout status deployment/backend-deployment
+                kubectl rollout status deployment/frontend-deployment
+                '''
             }
         }
+    }
+}
+
     }
 
     post {
