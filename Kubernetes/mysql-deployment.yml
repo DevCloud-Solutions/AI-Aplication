@@ -29,11 +29,11 @@ spec:
         - name: MYSQL_DATABASE
           value: "deid"
 
-        volumeMounts:
-        - name: mysql-storage
-          mountPath: /var/lib/mysql
-      volumes:
-      - name: mysql-storage
-        persistentVolumeClaim:
-          claimName: mysql-pvc
+      #   volumeMounts:
+      #   - name: mysql-storage
+      #     mountPath: /var/lib/mysql
+      # volumes:
+      # - name: mysql-storage
+      #   persistentVolumeClaim:
+      #     claimName: mysql-pvc
       
