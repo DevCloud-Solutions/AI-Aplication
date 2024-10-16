@@ -9,6 +9,7 @@ pipeline {
         IMAGE_TAG = 'latest'
         ANSIBLE_INVENTORY = 'inventory'
         TERRAFORM_DIR = 'Terraform'
+        KUBECONFIG_PATH = '/tmp/kubeconfig'
     }
 
     stages {
@@ -18,29 +19,14 @@ pipeline {
             }
         }
 
-        // stage('Terraform Init') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             sh 'terraform init'
-        //         }
-        //     }
-        // }
-
-        // stage('Terraform Plan') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             sh 'terraform plan -out=tfplan'
-        //         }
-        //     }
-        // }
-
-        // stage('Terraform Apply') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             sh 'terraform apply -auto-approve tfplan'
-        //         }
-        //     }
-        // }
+        stage('Setup Infrastructure with Terraform') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform init'
+                    sh 'terraform apply -auto-approve'
+                }
+            }
+        }
 
         stage('Generate Ansible Inventory') {
             steps {
@@ -70,6 +56,14 @@ ${workertwo_ip}
             }
         }
 
+        stage('Create Kubeconfig with Ansible') {
+            steps {
+                script {
+                    sh 'ansible-playbook ansible/create-kubeconfig.yml'
+                }
+            }
+        }
+
         stage('Build and Push Docker Images') {
             steps {
                 script {
@@ -91,11 +85,11 @@ ${workertwo_ip}
 
         stage('Deploy to Kubernetes') {
             steps {
-                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                    script {
+                script {
+                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}"]) {
                         sh '''
-                        kubectl set image deployment/backend-deployment backend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
-                        kubectl set image deployment/frontend-deployment frontend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
+                        kubectl apply -f kubernetes/backend-deployment.yaml
+                        kubectl apply -f kubernetes/frontend-deployment.yaml
                         kubectl rollout status deployment/backend-deployment
                         kubectl rollout status deployment/frontend-deployment
                         '''

@@ -366,3 +366,35 @@ output "workertwo_public_ip" {
   value = aws_instance.workertwo.public_ip
   description = "Public IP address of the second worker instance"
 }
+
+provider "kubernetes" {
+  config_path = "~/.kube/config"  # Kubeconfig dosyasına erişim
+}
+
+resource "kubernetes_service_account" "jenkins" {
+  metadata {
+    name      = "jenkins-sa"
+    namespace = "default"
+  }
+}
+
+resource "kubernetes_cluster_role_binding" "jenkins" {
+  metadata {
+    name = "jenkins-sa-binding"
+  }
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = "cluster-admin"
+  }
+  subjects {
+    kind      = "ServiceAccount"
+    name      = kubernetes_service_account.jenkins.metadata[0].name
+    namespace = "default"
+  }
+}
+
+output "jenkins_service_account" {
+  value = kubernetes_service_account.jenkins.metadata[0].name
+  description = "Name of the Jenkins ServiceAccount"
+}
