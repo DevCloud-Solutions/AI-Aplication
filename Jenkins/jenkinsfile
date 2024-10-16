@@ -86,7 +86,7 @@ ${workertwo_ip}
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}"]) {
+                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
                         sh '''
                         kubectl apply -f kubernetes/backend-deployment.yaml
                         kubectl apply -f kubernetes/frontend-deployment.yaml
