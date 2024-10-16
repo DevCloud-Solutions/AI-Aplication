@@ -59,7 +59,7 @@ ${workertwo_ip}
         stage('Create Kubeconfig with Ansible') {
             steps {
                 script {
-                    sh 'ansible-playbook ansible/create-kubeconfig.yml'
+                    sh 'ansible-playbook Ansible/playbooks/create-kubeconfig.yml'
                 }
             }
         }
