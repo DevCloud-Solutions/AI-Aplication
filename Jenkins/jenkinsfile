@@ -38,11 +38,11 @@ pipeline {
 
                         writeFile file: 'inventory', text: """
 [master]
-${master_ip}
+${master_ip} ansible_user=ec2-user
 
 [workers]
-${workerone_ip}
-${workertwo_ip}
+${workerone_ip} ansible_user=ec2-user
+${workertwo_ip} ansible_user=ec2-user
 """
                     }
                 }
@@ -51,8 +51,17 @@ ${workertwo_ip}
 
         stage('Run Ansible Playbooks') {
             steps {
-                sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
-                sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY_PATH')]) {
+                    sh '''
+                    ansible-playbook -i ${ANSIBLE_INVENTORY} \
+                        --private-key $SSH_KEY_PATH \
+                        Ansible/playbooks/master_setup.yml
+
+                    ansible-playbook -i ${ANSIBLE_INVENTORY} \
+                        --private-key $SSH_KEY_PATH \
+                        Ansible/playbooks/worker_setup.yml
+                    '''
+                }
             }
         }
 
