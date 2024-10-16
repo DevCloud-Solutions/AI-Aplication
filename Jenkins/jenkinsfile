@@ -50,20 +50,16 @@ ${workertwo_ip} ansible_user=ec2-user
         }
 
         stage('Run Ansible Playbooks') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY_PATH')]) {
-                    sh '''
-                    ansible-playbook -i ${ANSIBLE_INVENTORY} \
-                        --private-key $SSH_KEY_PATH \
-                        Ansible/playbooks/master_setup.yml
-
-                    ansible-playbook -i ${ANSIBLE_INVENTORY} \
-                        --private-key $SSH_KEY_PATH \
-                        Ansible/playbooks/worker_setup.yml
-                    '''
-                }
-            }
+    steps {
+        withCredentials([sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY_PATH')]) {
+            sh '''
+            echo "SSH anahtarı burada: $SSH_KEY_PATH"
+            ansible-playbook -i inventory --private-key $SSH_KEY_PATH Ansible/playbooks/master_setup.yml
+            ansible-playbook -i inventory --private-key $SSH_KEY_PATH Ansible/playbooks/worker_setup.yml
+            '''
         }
+    }
+}
 
         // stage('Create Kubeconfig with Ansible') {
         //     steps {
