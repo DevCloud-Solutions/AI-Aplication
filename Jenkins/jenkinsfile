@@ -9,7 +9,7 @@ pipeline {
         IMAGE_TAG = 'latest'
         ANSIBLE_INVENTORY = 'inventory'
         TERRAFORM_DIR = 'Terraform'
-         KUBECONFIG_PATH = '/home/ec2-user/.kube/config'  // Kubeconfig dosyası buradan alınacak
+        KUBECONFIG_PATH = '/home/ec2-user/.kube/config'  // Kubeconfig dosyası
     }
 
     stages {
@@ -18,8 +18,7 @@ pipeline {
                 git branch: 'dev', url: 'https://github.com/DevCloud-Solutions/AI-Application.git'
             }
         }
-
-        // stage('Setup Infrastructure with Terraform') {
+    // stage('Setup Infrastructure with Terraform') {
         //     steps {
         //         dir("${TERRAFORM_DIR}") {
         //             sh 'terraform init'
@@ -50,24 +49,29 @@ ${workertwo_ip} ansible_user=ec2-user
         }
 
         stage('Run Ansible Playbooks') {
-    steps {
-        withCredentials([sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY_PATH')]) {
-            sh '''
-            echo "SSH anahtarı burada: $SSH_KEY_PATH"
-            ansible-playbook -i inventory --private-key $SSH_KEY_PATH Ansible/playbooks/master_setup.yml
-            ansible-playbook -i inventory --private-key $SSH_KEY_PATH Ansible/playbooks/worker_setup.yml
-            '''
-        }
-    }
-}
+            steps {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY_PATH', usernameVariable: 'SSH_USER')]) {
+                    sh '''
+                    echo "SSH anahtarı burada: $SSH_KEY_PATH"
 
-        // stage('Create Kubeconfig with Ansible') {
-        //     steps {
-        //         script {
-        //             sh 'ansible-playbook Ansible/playbooks/create-kubeconfig.yml'
-        //         }
-        //     }
-        // }
+                    # PEM dosyasının izinlerini düzenle
+                    chmod 400 $SSH_KEY_PATH
+                    chown jenkins:jenkins $SSH_KEY_PATH
+
+                    # Ansible için ortam değişkenlerini ayarla
+                    export ANSIBLE_PRIVATE_KEY_FILE="$SSH_KEY_PATH"
+                    export ANSIBLE_HOST_KEY_CHECKING=False
+
+                    # Ansible playbook'ları çalıştır
+                    ansible-playbook -i inventory --private-key $SSH_KEY_PATH \
+                        Ansible/playbooks/master_setup.yml
+
+                    ansible-playbook -i inventory --private-key $SSH_KEY_PATH \
+                        Ansible/playbooks/worker_setup.yml
+                    '''
+                }
+            }
+        }
 
         stage('Build and Push Docker Images') {
             steps {
@@ -89,32 +93,31 @@ ${workertwo_ip} ansible_user=ec2-user
         }
 
         stage('Deploy to Kubernetes') {
-    steps {
-        script {
-            withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
-                sh '''
-                echo "PATH: $PATH"  # PATH kontrolü
-                echo "Kubeconfig path: $KUBECONFIG"  # Kubeconfig doğrulama
-                kubectl version --client  # Kubectl erişimini kontrol et
-                kubectl apply -f kubernetes/backend-deployment.yaml
-                kubectl apply -f kubernetes/frontend-deployment.yaml
-                kubectl rollout status deployment/backend-deployment
-                kubectl rollout status deployment/frontend-deployment
-                '''
+            steps {
+                script {
+                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
+                        sh '''
+                        echo "PATH: $PATH"  # PATH kontrolü
+                        echo "Kubeconfig path: $KUBECONFIG"  # Kubeconfig doğrulama
+                        kubectl version --client  # Kubectl erişimini kontrol et
+                        kubectl apply -f kubernetes/backend-deployment.yaml
+                        kubectl apply -f kubernetes/frontend-deployment.yaml
+                        kubectl rollout status deployment/backend-deployment
+                        kubectl rollout status deployment/frontend-deployment
+                        '''
+                    }
+                }
             }
         }
-    }
-}
-
     }
 
     post {
         always {
-            cleanWs()
+            cleanWs()  // İşlem tamamlandığında workspace temizlenir
         }
         failure {
             dir("${TERRAFORM_DIR}") {
-                sh 'terraform destroy -auto-approve'
+                sh 'terraform destroy -auto-approve'  // Başarısızlık durumunda altyapı yok edilir
             }
         }
     }
