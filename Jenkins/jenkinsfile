@@ -11,8 +11,8 @@ pipeline {
             steps {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     sh '''
-                        echo "$SSH_KEY" > $SSH_KEY_PATH
-                        chmod 400 $SSH_KEY_PATH
+                        cp $SSH_KEY /var/lib/jenkins/workspace/test/test.pem
+                        chmod 400 /var/lib/jenkins/workspace/test/test.pem
 
                         terraform output -json > inventory.json
 
