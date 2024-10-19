@@ -75,7 +75,7 @@ EOF
             steps {
                 sh '''
                     ansible-playbook -i inventory.yaml ./Ansible/playbooks/master_setup.yml \
-                    --private-key test.pem ec2-user
+                    --private-key test.pem -u ec2-user
                 '''
             }
         }
@@ -84,7 +84,7 @@ EOF
             steps {
                 sh '''
                     ansible-playbook -i inventory.yaml ./Ansible/playbooks/worker_setup.yml \
-                    --private-key test.pem ec2-user
+                    --private-key test.pem -u ec2-user
                 '''
             }
         }
