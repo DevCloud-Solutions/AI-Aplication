@@ -62,11 +62,11 @@ with open('inventory.yaml', 'w') as f:
             steps {
                 sh '''
                     cat <<EOF > $ANSIBLE_CFG_PATH
-                    [defaults]
-                    inventory = ./inventory.yaml
-                    host_key_checking = False
-                    private_key_file = $SSH_KEY_PATH
-                    EOF
+[defaults]
+inventory = ./inventory.yaml
+host_key_checking = False
+private_key_file = $SSH_KEY_PATH
+EOF
                 '''
             }
         }
