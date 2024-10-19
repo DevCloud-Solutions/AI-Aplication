@@ -2,41 +2,41 @@ pipeline {
     agent any
 
     environment {
-        SSH_KEY_PATH = 'test.pem'  // Geçici SSH anahtar dosya yolu
-        ANSIBLE_CFG_PATH = 'ansible.cfg'  // Geçici Ansible config dosyası
+        SSH_KEY_PATH = 'test.pem'
+        ANSIBLE_CFG_PATH = 'ansible.cfg'
     }
 
     stages {
-        stage('Checkout Terraform and Ansible Code') {
-            steps {
-                git branch: 'dev', url: 'https://github.com/DevCloud-Solutions/AI-Application.git'
-            }
-        }
-
         stage('Terraform Apply') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY_FILE')]) {
+                withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY')]) {
                     sh '''
-                        # SSH anahtarını geçici bir dosyaya yazdır
-                        echo "$SSH_KEY_FILE" > $SSH_KEY_PATH
+                        echo "$SSH_KEY" > $SSH_KEY_PATH
                         chmod 400 $SSH_KEY_PATH
 
-                        # Terraform çıktısını JSON formatına aktar
                         terraform output -json > inventory.json
 
-                        # Python ile inventory.yaml dosyasını oluştur
                         python3 -c "
 import json
 
 with open('inventory.json') as f:
     data = json.load(f)
 
+master_ip = data.get('master_public_ip', {}).get('value')
+workerone_ip = data.get('workerone_public_ip', {}).get('value')
+workertwo_ip = data.get('workertwo_public_ip', {}).get('value')
+
+if not master_ip:
+    raise ValueError('master_public_ip bulunamadı!')
+
+worker_ips = [ip for ip in [workerone_ip, workertwo_ip] if ip]
+
 inventory = {
     'master': {
-        'hosts': [data['master_public_ip']['value']]
+        'hosts': [master_ip]
     },
     'workers': {
-        'hosts': data['ec2_public_ips']['value']
+        'hosts': worker_ips
     }
 }
 
@@ -82,7 +82,7 @@ with open('inventory.yaml', 'w') as f:
 
     post {
         always {
-            // Temizlik işlemi
+            // Temizlik: Geçici dosyaları sil
             sh 'rm -f $SSH_KEY_PATH $ANSIBLE_CFG_PATH inventory.yaml'
         }
     }
