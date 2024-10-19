@@ -90,11 +90,11 @@ EOF
         }
     }
 
-    post {
-        always {
-            sh 'rm -f $SSH_KEY_PATH $ANSIBLE_CFG_PATH inventory.yaml'
-        }
-    }
+    // post {
+    //     always {
+    //         sh 'rm -f $SSH_KEY_PATH $ANSIBLE_CFG_PATH inventory.yaml'
+    //     }
+    // }
 }
 
 
