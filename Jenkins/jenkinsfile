@@ -24,7 +24,7 @@ with open('inventory.json') as f:
     data = json.load(f)
 
 # Master ve Worker IP'leri al
-master_ip = data.get('master_public_ip', {}).get('value', '0.0.0.0')
+master_ip = data.get('master_public_ip', {}).get('value', '35.159.119.33')
 workerone_ip = data.get('workerone_public_ip', {}).get('value')
 workertwo_ip = data.get('workertwo_public_ip', {}).get('value')
 
