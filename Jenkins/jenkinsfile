@@ -10,12 +10,12 @@ pipeline {
     stages {
         stage('Terraform Apply') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY_FILE')]) {
                     sh '''
                         echo "Anahtar kopyalanıyor..."
-                        cp $SSH_KEY $SSH_PRIVATE_KEY_PATH
-                        chmod 400 $SSH_PRIVATE_KEY_PATH
-                        ls -l $SSH_PRIVATE_KEY_PATH || echo "SSH anahtarı bulunamadı!"
+                        cp $SSH_KEY_FILE /var/lib/jenkins/workspace/test/test.pem
+                        chmod 400 /var/lib/jenkins/workspace/test/test.pem
+                        ls -l /var/lib/jenkins/workspace/test/test.pem
 
                         terraform output -json > inventory.json
 
