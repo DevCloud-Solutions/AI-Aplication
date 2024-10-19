@@ -7,9 +7,10 @@ pipeline {
         ECR_BACKEND_REPO_NAME = 'backend-repo'
         ECR_FRONTEND_REPO_NAME = 'frontend-repo'
         IMAGE_TAG = 'latest'
-        ANSIBLE_INVENTORY = 'inventory'
         TERRAFORM_DIR = 'Terraform'
         KUBECONFIG_PATH = '/home/ec2-user/.kube/config'  // Kubeconfig dosyası
+        SSH_KEY_PATH = 'test.pem'  // SSH anahtarının geçici dosya yolu
+        ANSIBLE_CFG_PATH = 'ansible.cfg'  // Geçici ansible.cfg dosyası
     }
 
     stages {
@@ -18,107 +19,128 @@ pipeline {
                 git branch: 'dev', url: 'https://github.com/DevCloud-Solutions/AI-Application.git'
             }
         }
-    // stage('Setup Infrastructure with Terraform') {
-        //     steps {
-        //         dir("${TERRAFORM_DIR}") {
-        //             sh 'terraform init'
-        //             sh 'terraform apply -auto-approve'
-        //         }
-        //     }
-        // }
-
-        stage('Generate Ansible Inventory') {
+    stages {
+        stage('Terraform Apply') {
             steps {
-                dir("${TERRAFORM_DIR}") {
-                    script {
-                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
-
-                        writeFile file: 'inventory', text: """
-[master]
-${master_ip} ansible_user=ec2-user
-
-[workers]
-${workerone_ip} ansible_user=ec2-user
-${workertwo_ip} ansible_user=ec2-user
-"""
-                    }
-                }
-            }
-        }
-
-        stage('Run Ansible Playbooks') {
-            steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-key', keyFileVariable: 'SSH_KEY_PATH', usernameVariable: 'SSH_USER')]) {
+                withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY')]) {
                     sh '''
-                    echo "SSH anahtarı burada: $SSH_KEY_PATH"
+                        terraform init
+                        terraform apply -auto-approve
+                        terraform output -json > inventory.json
 
-                    # PEM dosyasının izinlerini düzenle
-                    chmod 400 $SSH_KEY_PATH
-                    chown jenkins:jenkins $SSH_KEY_PATH
+                        # SSH anahtarını geçici dosyaya kopyala ve izinlerini ayarla
+                        cp $SSH_KEY $SSH_KEY_PATH
+                        chmod 400 $SSH_KEY_PATH
 
-                    # Ansible için ortam değişkenlerini ayarla
-                    export ANSIBLE_PRIVATE_KEY_FILE="$SSH_KEY_PATH"
-                    export ANSIBLE_HOST_KEY_CHECKING=False
+                        # Python script ile inventory.yaml dosyasını oluştur
+                        python3 -c "
+import json
 
-                    # Ansible playbook'ları çalıştır
-                    ansible-playbook -i inventory --private-key $SSH_KEY_PATH \
-                        Ansible/playbooks/master_setup.yml
+with open('inventory.json') as f:
+    data = json.load(f)
 
-                    ansible-playbook -i inventory --private-key $SSH_KEY_PATH \
-                        Ansible/playbooks/worker_setup.yml
+inventory = {
+    'master': {
+        'hosts': [data['master_public_ip']['value']]
+    },
+    'workers': {
+        'hosts': data['ec2_public_ips']['value']
+    }
+}
+
+with open('inventory.yaml', 'w') as f:
+    f.write(json.dumps(inventory, indent=2))
+"
                     '''
                 }
             }
         }
-
-        stage('Build and Push Docker Images') {
+        stage('Create Ansible Config') {
             steps {
-                script {
-                    sh '''
-                    docker build -t ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} -f backend/Dockerfile .
-                    docker build -t ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} -f frontend/Dockerfile .
-
-                    aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-
-                    docker tag ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
-                    docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
-
-                    docker tag ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
-                    docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
-                    '''
-                }
+                // ansible.cfg dosyasını oluştur
+                sh '''
+                    cat <<EOF > $ANSIBLE_CFG_PATH
+                    [defaults]
+                    inventory = ./inventory.yaml
+                    host_key_checking = False
+                    private_key_file = $SSH_KEY_PATH
+                    EOF
+                '''
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Ansible Master Setup') {
             steps {
-                script {
-                    withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
-                        sh '''
-                        echo "PATH: $PATH"  # PATH kontrolü
-                        echo "Kubeconfig path: $KUBECONFIG"  # Kubeconfig doğrulama
-                        kubectl version --client  # Kubectl erişimini kontrol et
-                        kubectl apply -f kubernetes/backend-deployment.yaml
-                        kubectl apply -f kubernetes/frontend-deployment.yaml
-                        kubectl rollout status deployment/backend-deployment
-                        kubectl rollout status deployment/frontend-deployment
-                        '''
-                    }
-                }
+                sh '''
+                    ansible-playbook -i inventory.yaml /Ansible/playbooks/master_setup.yml \
+                    --private-key $SSH_KEY_PATH
+                '''
+            }
+        }
+        stage('Ansible Worker Setup') {
+            steps {
+                sh '''
+                    ansible-playbook -i inventory.yaml /Ansible/playbooks/worker_setup.yml \
+                    --private-key $SSH_KEY_PATH
+                '''
             }
         }
     }
-
     post {
         always {
-            cleanWs()  // İşlem tamamlandığında workspace temizlenir
-        }
-        failure {
-            dir("${TERRAFORM_DIR}") {
-                sh 'terraform destroy -auto-approve'  // Başarısızlık durumunda altyapı yok edilir
-            }
+            // Temizlik: Geçici dosyaları sil
+            sh 'rm -f $SSH_KEY_PATH $ANSIBLE_CFG_PATH'
         }
     }
 }
+}
+
+//         stage('Build and Push Docker Images') {
+//             steps {
+//                 script {
+//                     sh '''
+//                     docker build -t ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} -f backend/Dockerfile .
+//                     docker build -t ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} -f frontend/Dockerfile .
+
+//                     aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+
+//                     docker tag ${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
+//                     docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_BACKEND_REPO_NAME}:${IMAGE_TAG}
+
+//                     docker tag ${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG} ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
+//                     docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_FRONTEND_REPO_NAME}:${IMAGE_TAG}
+//                     '''
+//                 }
+//             }
+//         }
+
+//         stage('Deploy to Kubernetes') {
+//             steps {
+//                 script {
+//                     withEnv(["KUBECONFIG=${KUBECONFIG_PATH}", "PATH=$PATH:/usr/local/bin"]) {
+//                         sh '''
+//                         echo "PATH: $PATH"  # PATH kontrolü
+//                         echo "Kubeconfig path: $KUBECONFIG"  # Kubeconfig doğrulama
+//                         kubectl version --client  # Kubectl erişimini kontrol et
+//                         kubectl apply -f kubernetes/backend-deployment.yaml
+//                         kubectl apply -f kubernetes/frontend-deployment.yaml
+//                         kubectl rollout status deployment/backend-deployment
+//                         kubectl rollout status deployment/frontend-deployment
+//                         '''
+//                     }
+//                 }
+//             }
+//         }
+//     }
+
+//     post {
+//         always {
+//             cleanWs()  // İşlem tamamlandığında workspace temizlenir
+//         }
+//         failure {
+//             dir("${TERRAFORM_DIR}") {
+//                 sh 'terraform destroy -auto-approve'  // Başarısızlık durumunda altyapı yok edilir
+//             }
+//         }
+//     }
+// }
