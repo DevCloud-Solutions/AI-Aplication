@@ -28,18 +28,22 @@ pipeline {
                         python3 -c "
 import json
 
+# JSON dosyasını oku
 with open('inventory.json') as f:
     data = json.load(f)
 
+# Anahtarları al ve kontrol et
 master_ip = data.get('master_public_ip', {}).get('value')
 workerone_ip = data.get('workerone_public_ip', {}).get('value')
 workertwo_ip = data.get('workertwo_public_ip', {}).get('value')
 
 if not master_ip:
-    raise ValueError('master_public_ip bulunamadı!')
+    print("master_public_ip bulunamadı! Terraform çıktısını kontrol edin.")
+    master_ip = "0.0.0.0"  # Geçici varsayılan değer
 
 worker_ips = [ip for ip in [workerone_ip, workertwo_ip] if ip]
 
+# Envanter dosyasını oluştur
 inventory = {
     'master': {
         'hosts': [master_ip]
@@ -49,8 +53,10 @@ inventory = {
     }
 }
 
+# Envanteri YAML formatında kaydet
 with open('inventory.yaml', 'w') as f:
     f.write(json.dumps(inventory, indent=2))
+
 "
                     '''
                 }
