@@ -24,8 +24,7 @@ pipeline {
             steps {
                 withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY')]) {
                     sh '''
-                        terraform init
-                        terraform apply -auto-approve
+                        
                         terraform output -json > inventory.json
 
                         # SSH anahtarını geçici dosyaya kopyala ve izinlerini ayarla
