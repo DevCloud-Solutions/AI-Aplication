@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        SSH_KEY_PATH = 'test.pem'  // Geçici SSH anahtar dosya yolu
-        ANSIBLE_CFG_PATH = 'ansible.cfg'  // Ansible config dosyası
+        SSH_KEY_PATH = 'test.pem'
+        ANSIBLE_CFG_PATH = 'ansible.cfg'
     }
 
     stages {
@@ -15,16 +15,13 @@ pipeline {
 
         stage('Terraform Apply') {
             steps {
-                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
+                withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY')]) {
                     sh '''
-                        # SSH anahtarını geçici bir dosyaya yazdır
                         echo "$SSH_KEY" > $SSH_KEY_PATH
                         chmod 400 $SSH_KEY_PATH
 
-                        # Terraform çıktısını JSON formatına aktar
                         terraform output -json > inventory.json
 
-                        # Python ile inventory.yaml dosyası oluştur
                         python3 -c "
 import json
 
@@ -36,7 +33,7 @@ inventory = {
         'hosts': [data['master_public_ip']['value']]
     },
     'workers': {
-        'hosts': data['ec2_public_ips']['value']]
+        'hosts': data['ec2_public_ips']['value']
     }
 }
 
@@ -64,8 +61,7 @@ with open('inventory.yaml', 'w') as f:
         stage('Ansible Master Setup') {
             steps {
                 sh '''
-                    ansible-playbook -i inventory.yaml /Ansible/playbooks/master_setup.yml \
-                    --private-key $SSH_KEY_PATH
+                    ansible-playbook -i inventory.yaml /Ansible/playbooks/master_setup.yml --private-key $SSH_KEY_PATH
                 '''
             }
         }
@@ -73,8 +69,7 @@ with open('inventory.yaml', 'w') as f:
         stage('Ansible Worker Setup') {
             steps {
                 sh '''
-                    ansible-playbook -i inventory.yaml /Ansible/playbooks/worker_setup.yml \
-                    --private-key $SSH_KEY_PATH
+                    ansible-playbook -i inventory.yaml /Ansible/playbooks/worker_setup.yml --private-key $SSH_KEY_PATH
                 '''
             }
         }
@@ -82,8 +77,7 @@ with open('inventory.yaml', 'w') as f:
 
     post {
         always {
-            // Geçici dosyaları temizle
-            sh 'rm -f $SSH_KEY_PATH $ANSIBLE_CFG_PATH inventory.yaml'
+            sh 'rm -f $SSH_KEY_PATH $ANSCILE_CFG_PATH inventory.yaml'
         }
     }
 }
