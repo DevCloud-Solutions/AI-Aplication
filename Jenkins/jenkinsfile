@@ -13,8 +13,7 @@ pipeline {
                 withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY_FILE')]) {
                     sh '''
                         echo "Anahtar kopyalanıyor..."
-                        cp $SSH_KEY_FILE /var/lib/jenkins/workspace/test/test.pem
-                        chmod 400 /var/lib/jenkins/workspace/test/test.pem
+                        
                         ls -l /var/lib/jenkins/workspace/test/test.pem
 
                         terraform output -json > inventory.json
