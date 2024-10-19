@@ -19,24 +19,35 @@ pipeline {
                         python3 -c "
 import json
 
+# JSON dosyasını oku
 with open('inventory.json') as f:
     data = json.load(f)
 
+# Master ve Worker IP'leri al
 master_ip = data.get('master_public_ip', {}).get('value', '0.0.0.0')
 workerone_ip = data.get('workerone_public_ip', {}).get('value')
 workertwo_ip = data.get('workertwo_public_ip', {}).get('value')
 
+# Worker IP'lerini listele
 worker_ips = [ip for ip in [workerone_ip, workertwo_ip] if ip]
 
+# Doğru envanter yapısı
 inventory = {
-    'master': {
-        'hosts': [master_ip]
-    },
-    'workers': {
-        'hosts': worker_ips
+    'all': {
+        'children': {
+            'master': {
+                'hosts': {
+                    master_ip: {}
+                }
+            },
+            'workers': {
+                'hosts': {ip: {} for ip in worker_ips}
+            }
+        }
     }
 }
 
+# YAML formatında kaydet
 with open('inventory.yaml', 'w') as f:
     f.write(json.dumps(inventory, indent=2))
 "
