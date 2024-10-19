@@ -48,7 +48,6 @@ with open('inventory.yaml', 'w') as f:
         stage('Create Ansible Config') {
             steps {
                 sh '''
-                    # Ansible yapılandırma dosyasını oluştur
                     cat <<EOF > $ANSIBLE_CFG_PATH
 [defaults]
 inventory = ./inventory.yaml
@@ -56,7 +55,7 @@ host_key_checking = False
 private_key_file = $SSH_KEY_PATH
 EOF
                 '''
-                echo "Ansible config dosyası oluşturuldu: $(pwd)/ansible.cfg"
+                echo "Ansible config dosyası oluşturuldu: ${sh(returnStdout: true, script: 'pwd').trim()}/ansible.cfg"
             }
         }
 
@@ -81,7 +80,6 @@ EOF
 
     post {
         always {
-            // Geçici dosyaları temizle
             sh 'rm -f $SSH_KEY_PATH $ANSIBLE_CFG_PATH inventory.yaml'
         }
     }
