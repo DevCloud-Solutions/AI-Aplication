@@ -4,6 +4,7 @@ pipeline {
     environment {
         SSH_KEY_PATH = 'test.pem'
         ANSIBLE_CFG_PATH = 'ansible.cfg'
+        SSH_KEY_PATH = '/var/lib/jenkins/workspace/test/test.pem'
     }
 
     stages {
@@ -12,9 +13,9 @@ pipeline {
                 withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     sh '''
                         echo "Anahtar kopyalanıyor..."
-                        cp $SSH_KEY /var/lib/jenkins/workspace/test/test.pem
-                        chmod 400 /var/lib/jenkins/workspace/test/test.pem
-                        ls -l /var/lib/jenkins/workspace/test/
+                        cp $SSH_KEY $SSH_KEY_PATH
+                        chmod 400 $SSH_KEY_PATH
+                        ls -l $SSH_KEY_PATH || echo "SSH anahtarı bulunamadı!"
 
                         terraform output -json > inventory.json
 
