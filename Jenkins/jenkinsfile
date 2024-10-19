@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Terraform Apply') {
             steps {
-                withCredentials([file(credentialsId: 'ec2-ssh-key', variable: 'SSH_KEY')]) {
+                withCredentials([sshUserPrivateKey(credentialsId: 'ec2-ssh-key', keyFileVariable: 'SSH_KEY')]) {
                     sh '''
                         echo "$SSH_KEY" > $SSH_KEY_PATH
                         chmod 400 $SSH_KEY_PATH
@@ -55,7 +55,6 @@ host_key_checking = False
 private_key_file = $SSH_KEY_PATH
 EOF
                 '''
-                echo "Ansible config dosyası oluşturuldu: ${sh(returnStdout: true, script: 'pwd').trim()}/ansible.cfg"
             }
         }
 
