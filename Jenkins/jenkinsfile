@@ -68,8 +68,8 @@ ${workertwo_ip} ansible_user=ec2-user
             steps {
                 sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID'si
                     script {
-                        sh 'ansible-playbook -i inventory Ansible/playbooks/master_setup.yml'
-                        sh 'ansible-playbook -i inventory Ansible/playbooks/worker_setup.yml'
+                        sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
+                        sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
                     }
                 }
             }
