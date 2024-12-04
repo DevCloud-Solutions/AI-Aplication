@@ -7,7 +7,6 @@ pipeline {
         ECR_BACKEND_REPO_NAME = 'backend-repo'
         ECR_FRONTEND_REPO_NAME = 'frontend-repo'
         IMAGE_TAG = 'latest'
-        ANSIBLE_INVENTORY = 'inventory'
         TERRAFORM_DIR = 'Terraform'
     }
 
@@ -42,8 +41,7 @@ pipeline {
             }
         }
 
-        
-        stage('Generate Ansible Inventory') {
+        stage('Generate Dynamic Ansible Inventory') {
             steps {
                 dir("${TERRAFORM_DIR}") {
                     script {
@@ -51,14 +49,32 @@ pipeline {
                         def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
                         def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
 
-                        writeFile file: 'inventory', text: """
-[master]
-${master_ip} ansible_user=ec2-user
+                        // Python script ile dinamik inventory oluştur
+                        writeFile file: 'dynamic_inventory.py', text: """
+#!/usr/bin/env python3
+import json
 
-[workers]
-${workerone_ip} ansible_user=ec2-user
-${workertwo_ip} ansible_user=ec2-user
+def get_inventory():
+    inventory = {
+        "master": {
+            "hosts": ["${master_ip}"],
+            "vars": {
+                "ansible_user": "ec2-user"
+            }
+        },
+        "workers": {
+            "hosts": ["${workerone_ip}", "${workertwo_ip}"],
+            "vars": {
+                "ansible_user": "ec2-user"
+            }
+        }
+    }
+    print(json.dumps(inventory))
+
+if __name__ == "__main__":
+    get_inventory()
 """
+                        sh 'chmod +x dynamic_inventory.py'
                     }
                 }
             }
@@ -66,18 +82,20 @@ ${workertwo_ip} ansible_user=ec2-user
 
         stage('Run Ansible Playbooks') {
             steps {
-                sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID'si
-                    script {
-                        sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
-                        sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
+                sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID
+                    dir("${TERRAFORM_DIR}") {
+                        script {
+                            sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/master_setup.yml'
+                            sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/worker_setup.yml'
+                        }
                     }
                 }
             }
         }
+
         stage('Approve Destroy') {
             steps {
                 script {
-                    // Kullanıcıdan onay almak için input bloğu
                     def destroyApproval = input message: 'Tüm altyapıyı silmek istediğinize emin misiniz?', ok: 'Evet, Sil', parameters: [
                         choice(name: 'ConfirmDestroy', choices: ['Hayır', 'Evet'], description: 'Devam etmek istiyor musunuz?')
                     ]
@@ -97,6 +115,7 @@ ${workertwo_ip} ansible_user=ec2-user
         }
     }
 }
+
     
 //         stage('Build Backend Docker Image') {
 //             steps {
