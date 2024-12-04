@@ -42,6 +42,38 @@ pipeline {
             }
         }
 
+        
+        stage('Generate Ansible Inventory') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    script {
+                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+
+                        writeFile file: 'inventory', text: """
+[master]
+${master_ip} ansible_user=ec2-user
+
+[workers]
+${workerone_ip} ansible_user=ec2-user
+${workertwo_ip} ansible_user=ec2-user
+"""
+                    }
+                }
+            }
+        }
+
+        stage('Run Ansible Playbooks') {
+            steps {
+                sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID'si
+                    script {
+                        sh 'ansible-playbook -i inventory Ansible/playbooks/master_setup.yml'
+                        sh 'ansible-playbook -i inventory Ansible/playbooks/worker_setup.yml'
+                    }
+                }
+            }
+        }
         stage('Approve Destroy') {
             steps {
                 script {
@@ -65,37 +97,7 @@ pipeline {
         }
     }
 }
-
-//         stage('Generate Ansible Inventory') {
-//             steps {
-//                 dir("${TERRAFORM_DIR}") {
-//                     script {
-//                         def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-//                         def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-//                         def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
-                        
-//                         writeFile file: 'inventory', text: """
-// [master]
-// ${master_ip}
-
-// [workers]
-// ${workerone_ip}
-// ${workertwo_ip}
-// """
-//                     }
-//                 }
-//             }
-//         }
-
-//         stage('Run Ansible Playbooks') {
-//             steps {
-//                 script {
-//                     sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/master_setup.yml'
-//                     sh 'ansible-playbook -i ${ANSIBLE_INVENTORY} Ansible/playbooks/worker_setup.yml'
-//                 }
-//             }
-//         }
-
+    
 //         stage('Build Backend Docker Image') {
 //             steps {
 //                 script {
