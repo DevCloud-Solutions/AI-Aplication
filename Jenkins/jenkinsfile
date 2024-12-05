@@ -45,28 +45,30 @@ pipeline {
     steps {
         dir("${TERRAFORM_DIR}") {
             script {
+                // Terraform çıktıları alınıyor
                 def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
                 def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
                 def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
 
-                // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullan
+                // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullanıyoruz
                 def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
 
-                // Dinamik envanteri oluştur ve Ansible dizinine yaz
+                // Dinamik envanteri oluşturuyoruz
                 writeFile file: ansible_inventory_path, text: """
 #!/usr/bin/env python3
 import json
 
 def get_inventory():
     inventory = {
-        "master": {
-            "hosts": ["${master_ip}"],
-            "vars": {
-                "ansible_user": "ec2-user"
-            }
-        },
-        "workers": {
-            "hosts": ["${workerone_ip}", "${workertwo_ip}"],
+        "all": {
+            "children": {
+                "master": {
+                    "hosts": ["${master_ip}"]
+                },
+                "workers": {
+                    "hosts": ["${workerone_ip}", "${workertwo_ip}"]
+                }
+            },
             "vars": {
                 "ansible_user": "ec2-user"
             }
@@ -93,7 +95,7 @@ stage('Run Ansible Playbooks') {
                     def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
 
                     // Playbook dosyasının bulunduğu dizini kontrol et
-                    sh 'ls -l ${WORKSPACE}/Ansible/playbooks/'
+                    sh "ls -l ${WORKSPACE}/Ansible/playbooks/"
 
                     // Ansible playbooklarını çalıştırıyoruz
                     sh "ansible-playbook -i ${ansible_inventory_path} ${WORKSPACE}/Ansible/playbooks/master_setup.yml"
@@ -103,6 +105,7 @@ stage('Run Ansible Playbooks') {
         }
     }
 }
+
 
 
 
