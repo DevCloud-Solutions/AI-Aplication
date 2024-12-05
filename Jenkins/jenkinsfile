@@ -49,8 +49,11 @@ pipeline {
                         def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
                         def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
 
-                        // Python script ile dinamik inventory oluştur
-                        writeFile file: 'dynamic_inventory.py', text: """
+                        // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullan
+                        def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+
+                        // Dinamik envanteri oluştur ve Ansible dizinine yaz
+                        writeFile file: ansible_inventory_path, text: """
 #!/usr/bin/env python3
 import json
 
@@ -81,17 +84,22 @@ if __name__ == "__main__":
         }
 
         stage('Run Ansible Playbooks') {
-            steps {
-                sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID
-                    dir("${TERRAFORM_DIR}") {
-                        script {
-                            sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/master_setup.yml'
-                            sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/worker_setup.yml'
-                        }
-                    }
+    steps {
+        sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID
+            dir("${TERRAFORM_DIR}") {
+                script {
+                    // Dinamik envanter dosyasının doğru yolunu kullanıyoruz
+                    def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+
+                    // Ansible playbooklarını çalıştırıyoruz
+                    sh "ansible-playbook -i ${ansible_inventory_path} Ansible/playbooks/master_setup.yml"
+                    sh "ansible-playbook -i ${ansible_inventory_path} Ansible/playbooks/worker_setup.yml"
                 }
             }
         }
+    }
+}
+
 
         stage('Approve Destroy') {
             steps {
