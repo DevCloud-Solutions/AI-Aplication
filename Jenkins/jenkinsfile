@@ -19,134 +19,134 @@ pipeline {
             }
         }
         
-        // Debug stage: Check current directory and list files
-        stage('Debug Workspace') {
-            steps {
-                script {
-                    echo 'Checking workspace structure...'
-                    sh 'pwd'  // Current directory
-                    sh 'ls -l' // List files in the current directory
-                    sh 'ls -l Ansible/playbooks/' // List playbooks directory
-                }
-            }
-        }
-
-        stage('Terraform Init') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform init'
-                }
-            }
-        }
-
-        stage('Terraform Plan') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
-
-        stage('Terraform Apply') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
-
-        
-
-        // Generate Dynamic Ansible Inventory
-        stage('Generate Dynamic Ansible Inventory') {
-            steps {
-                dir("${env.WORKSPACE}") { // Ensure we are in the workspace directory
-                    script {
-                        echo 'Generating dynamic Ansible inventory...'
-                        def masterIP = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-                        def workerOneIP = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-                        def workerTwoIP = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
-                        
-                        writeFile file: 'dynamic_inventory.py', text: """
-import json
-inventory = {
-    "master": {"hosts": ["${masterIP}"], "vars": {"ansible_user": "ec2-user"}},
-    "workers": {"hosts": ["${workerOneIP}", "${workerTwoIP}"], "vars": {"ansible_user": "ec2-user"}}
-}
-print(json.dumps(inventory, indent=4))
-"""
-                        sh 'chmod +x dynamic_inventory.py'
-                        sh 'python3 dynamic_inventory.py'
-                    }
-                }
-            }
-        }
-        
-        // Run Ansible Playbooks
-        stage('Run Ansible Playbooks') {
-            steps {
-                script {
-                    sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/master_setup.yml'
-                }
-            }
-        }
-
-        // Approve Destroy Stage (optional)
-        stage('Approve Destroy') {
-            steps {
-                input 'Do you approve destroying the resources?'
-            }
-        }
-        
-        // Terraform Destroy (optional)
-        stage('Terraform Destroy') {
-            steps {
-                sh 'terraform destroy -auto-approve'
-            }
-        }
-        
-    }
-    
-    post {
-        always {
-            script {
-                echo 'Cleaning up workspace...'
-                deleteDir() // Clean up workspace
-            }
-        }
-        failure {
-            script {
-                echo 'Pipeline failed. Check the logs for details.'
-            }
-        }
-    }
-}
-
-
-
-
-//         stage('Approve Destroy') {
+//         // Debug stage: Check current directory and list files
+//         stage('Debug Workspace') {
 //             steps {
 //                 script {
-//                     def destroyApproval = input message: 'Tüm altyapıyı silmek istediğinize emin misiniz?', ok: 'Evet, Sil', parameters: [
-//                         choice(name: 'ConfirmDestroy', choices: ['Hayır', 'Evet'], description: 'Devam etmek istiyor musunuz?')
-//                     ]
-//                     if (destroyApproval != 'Evet') {
-//                         error("Destroy işlemi iptal edildi.")
+//                     echo 'Checking workspace structure...'
+//                     sh 'pwd'  // Current directory
+//                     sh 'ls -l' // List files in the current directory
+//                     sh 'ls -l Ansible/playbooks/' // List playbooks directory
+//                 }
+//             }
+//         }
+
+//         stage('Terraform Init') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     sh 'terraform init'
+//                 }
+//             }
+//         }
+
+//         stage('Terraform Plan') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     sh 'terraform plan -out=tfplan'
+//                 }
+//             }
+//         }
+
+//         stage('Terraform Apply') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     sh 'terraform apply -auto-approve tfplan'
+//                 }
+//             }
+//         }
+
+        
+
+//         // Generate Dynamic Ansible Inventory
+//         stage('Generate Dynamic Ansible Inventory') {
+//             steps {
+//                 dir("${env.WORKSPACE}") { // Ensure we are in the workspace directory
+//                     script {
+//                         echo 'Generating dynamic Ansible inventory...'
+//                         def masterIP = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+//                         def workerOneIP = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+//                         def workerTwoIP = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+                        
+//                         writeFile file: 'dynamic_inventory.py', text: """
+// import json
+// inventory = {
+//     "master": {"hosts": ["${masterIP}"], "vars": {"ansible_user": "ec2-user"}},
+//     "workers": {"hosts": ["${workerOneIP}", "${workerTwoIP}"], "vars": {"ansible_user": "ec2-user"}}
+// }
+// print(json.dumps(inventory, indent=4))
+// """
+//                         sh 'chmod +x dynamic_inventory.py'
+//                         sh 'python3 dynamic_inventory.py'
 //                     }
 //                 }
 //             }
 //         }
+        
+//         // Run Ansible Playbooks
+//         stage('Run Ansible Playbooks') {
+//             steps {
+//                 script {
+//                     sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/master_setup.yml'
+//                 }
+//             }
+//         }
 
+//         // Approve Destroy Stage (optional)
+//         stage('Approve Destroy') {
+//             steps {
+//                 input 'Do you approve destroying the resources?'
+//             }
+//         }
+        
+//         // Terraform Destroy (optional)
 //         stage('Terraform Destroy') {
 //             steps {
-//                 dir("${TERRAFORM_DIR}") {
-//                     sh 'terraform destroy -auto-approve'
-//                 }
+//                 sh 'terraform destroy -auto-approve'
+//             }
+//         }
+        
+//     }
+    
+//     post {
+//         always {
+//             script {
+//                 echo 'Cleaning up workspace...'
+//                 deleteDir() // Clean up workspace
+//             }
+//         }
+//         failure {
+//             script {
+//                 echo 'Pipeline failed. Check the logs for details.'
 //             }
 //         }
 //     }
 // }
+
+
+
+
+        stage('Approve Destroy') {
+            steps {
+                script {
+                    def destroyApproval = input message: 'Tüm altyapıyı silmek istediğinize emin misiniz?', ok: 'Evet, Sil', parameters: [
+                        choice(name: 'ConfirmDestroy', choices: ['Hayır', 'Evet'], description: 'Devam etmek istiyor musunuz?')
+                    ]
+                    if (destroyApproval != 'Evet') {
+                        error("Destroy işlemi iptal edildi.")
+                    }
+                }
+            }
+        }
+
+        stage('Terraform Destroy') {
+            steps {
+                dir("${TERRAFORM_DIR}") {
+                    sh 'terraform destroy -auto-approve'
+                }
+            }
+        }
+    }
+}
 
     
 //         stage('Build Backend Docker Image') {
