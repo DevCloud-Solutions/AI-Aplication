@@ -74,9 +74,7 @@ if __name__ == "__main__":
     get_inventory()
 """
                 sh 'chmod +x dynamic_inventory.py'
-                // Debugging
-                sh 'ls -l dynamic_inventory.py'
-                sh 'cat dynamic_inventory.py'
+                sh 'python3 ./dynamic_inventory.py' // Test the script with Python interpreter
             }
         }
     }
@@ -84,10 +82,10 @@ if __name__ == "__main__":
 
 stage('Run Ansible Playbooks') {
     steps {
-        sshagent(credentials: ['EC2-SSH-Key']) { 
+        sshagent(credentials: ['EC2-SSH-Key']) {
             dir("${TERRAFORM_DIR}") {
                 script {
-                    sh './dynamic_inventory.py' // Dinamik inventory dosyasını test edin
+                    sh 'python3 ./dynamic_inventory.py' // Ensure dynamic inventory is executable
                     sh 'ansible-playbook -v -i ./dynamic_inventory.py Ansible/playbooks/master_setup.yml'
                     sh 'ansible-playbook -v -i ./dynamic_inventory.py Ansible/playbooks/worker_setup.yml'
                 }
@@ -95,6 +93,7 @@ stage('Run Ansible Playbooks') {
         }
     }
 }
+
 
 
         stage('Approve Destroy') {
