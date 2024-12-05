@@ -17,88 +17,88 @@ pipeline {
             }
         }
 
-        stage('Terraform Init') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform init'
-                }
-            }
-        }
+//         stage('Terraform Init') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     sh 'terraform init'
+//                 }
+//             }
+//         }
 
-        stage('Terraform Plan') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform plan -out=tfplan'
-                }
-            }
-        }
+//         stage('Terraform Plan') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     sh 'terraform plan -out=tfplan'
+//                 }
+//             }
+//         }
 
-        stage('Terraform Apply') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    sh 'terraform apply -auto-approve tfplan'
-                }
-            }
-        }
+//         stage('Terraform Apply') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     sh 'terraform apply -auto-approve tfplan'
+//                 }
+//             }
+//         }
 
-        stage('Generate Dynamic Ansible Inventory') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    script {
-                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+//         stage('Generate Dynamic Ansible Inventory') {
+//             steps {
+//                 dir("${TERRAFORM_DIR}") {
+//                     script {
+//                         def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+//                         def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+//                         def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
 
-                        // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullan
-                        def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+//                         // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullan
+//                         def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
 
-                        // Dinamik envanteri oluştur ve Ansible dizinine yaz
-                        writeFile file: ansible_inventory_path, text: """
-#!/usr/bin/env python3
-import json
+//                         // Dinamik envanteri oluştur ve Ansible dizinine yaz
+//                         writeFile file: ansible_inventory_path, text: """
+// #!/usr/bin/env python3
+// import json
 
-def get_inventory():
-    inventory = {
-        "master": {
-            "hosts": ["${master_ip}"],
-            "vars": {
-                "ansible_user": "ec2-user"
-            }
-        },
-        "workers": {
-            "hosts": ["${workerone_ip}", "${workertwo_ip}"],
-            "vars": {
-                "ansible_user": "ec2-user"
-            }
-        }
-    }
-    print(json.dumps(inventory))
+// def get_inventory():
+//     inventory = {
+//         "master": {
+//             "hosts": ["${master_ip}"],
+//             "vars": {
+//                 "ansible_user": "ec2-user"
+//             }
+//         },
+//         "workers": {
+//             "hosts": ["${workerone_ip}", "${workertwo_ip}"],
+//             "vars": {
+//                 "ansible_user": "ec2-user"
+//             }
+//         }
+//     }
+//     print(json.dumps(inventory))
 
-if __name__ == "__main__":
-    get_inventory()
-"""
-                        sh 'chmod +x dynamic_inventory.py'
-                    }
-                }
-            }
-        }
+// if __name__ == "__main__":
+//     get_inventory()
+// """
+//                         sh 'chmod +x dynamic_inventory.py'
+//                     }
+//                 }
+//             }
+//         }
 
-        stage('Run Ansible Playbooks') {
-    steps {
-        sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID
-            dir("${TERRAFORM_DIR}") {
-                script {
-                    // Dinamik envanter dosyasının doğru yolunu kullanıyoruz
-                    def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+//         stage('Run Ansible Playbooks') {
+//     steps {
+//         sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID
+//             dir("${TERRAFORM_DIR}") {
+//                 script {
+//                     // Dinamik envanter dosyasının doğru yolunu kullanıyoruz
+//                     def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
 
-                    // Ansible playbooklarını çalıştırıyoruz
-                    sh "ansible-playbook -i ${ansible_inventory_path} Ansible/playbooks/master_setup.yml"
-                    sh "ansible-playbook -i ${ansible_inventory_path} Ansible/playbooks/worker_setup.yml"
-                }
-            }
-        }
-    }
-}
+//                     // Ansible playbooklarını çalıştırıyoruz
+//                     sh "ansible-playbook -i ${ansible_inventory_path} Ansible/playbooks/master_setup.yml"
+//                     sh "ansible-playbook -i ${ansible_inventory_path} Ansible/playbooks/worker_setup.yml"
+//                 }
+//             }
+//         }
+//     }
+// }
 
 
         stage('Approve Destroy') {
