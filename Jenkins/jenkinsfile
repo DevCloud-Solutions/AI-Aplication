@@ -42,18 +42,18 @@ pipeline {
         }
 
         stage('Generate Dynamic Ansible Inventory') {
-            steps {
-                dir("${TERRAFORM_DIR}") {
-                    script {
-                        def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
-                        def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
-                        def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+    steps {
+        dir("${TERRAFORM_DIR}") {
+            script {
+                def master_ip = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+                def workerone_ip = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+                def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
 
-                        // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullan
-                        def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+                // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullan
+                def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
 
-                        // Dinamik envanteri oluştur ve Ansible dizinine yaz
-                        writeFile file: ansible_inventory_path, text: """
+                // Dinamik envanteri oluştur ve Ansible dizinine yaz
+                writeFile file: ansible_inventory_path, text: """
 #!/usr/bin/env python3
 import json
 
@@ -77,13 +77,14 @@ def get_inventory():
 if __name__ == "__main__":
     get_inventory()
 """
-                        sh 'chmod +x dynamic_inventory.py'
-                    }
-                }
+                // Dosyaya çalıştırma izni ver
+                sh "chmod +x ${ansible_inventory_path}"
             }
         }
+    }
+}
 
-        stage('Run Ansible Playbooks') {
+stage('Run Ansible Playbooks') {
     steps {
         sshagent(credentials: ['EC2-SSH-Key']) { // EC2-SSH-Key, Jenkins Global Credentials ID
             dir("${TERRAFORM_DIR}") {
@@ -99,6 +100,7 @@ if __name__ == "__main__":
         }
     }
 }
+
 
 
         stage('Approve Destroy') {
