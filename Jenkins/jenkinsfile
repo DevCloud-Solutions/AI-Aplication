@@ -55,18 +55,7 @@ pipeline {
             }
         }
 
-        stage('Debug Workspace') {
-            steps {
-                script {
-                    echo 'Checking workspace structure...'
-                    sh '''
-                        pwd
-                        ls -l
-                        ls -l Ansible/playbooks/
-                    '''
-                }
-            }
-        }
+        
 
         // Generate Dynamic Ansible Inventory
         stage('Generate Dynamic Ansible Inventory') {
