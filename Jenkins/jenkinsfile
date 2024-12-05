@@ -85,7 +85,8 @@ stage('Run Ansible Playbooks') {
         sshagent(credentials: ['EC2-SSH-Key']) {
             dir("${TERRAFORM_DIR}") {
                 script {
-                    sh 'python3 ./dynamic_inventory.py' // Ensure dynamic inventory is executable
+                    sh 'python3 ./dynamic_inventory.py' // Doğrulama amaçlı
+                    sh 'ls -l Ansible/playbooks/' // Playbook dosyalarını kontrol et
                     sh 'ansible-playbook -v -i ./dynamic_inventory.py Ansible/playbooks/master_setup.yml'
                     sh 'ansible-playbook -v -i ./dynamic_inventory.py Ansible/playbooks/worker_setup.yml'
                 }
@@ -93,6 +94,7 @@ stage('Run Ansible Playbooks') {
         }
     }
 }
+
 
 
 
