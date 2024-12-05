@@ -8,17 +8,25 @@ pipeline {
         ECR_FRONTEND_REPO_NAME = 'frontend-repo'
         IMAGE_TAG = 'latest'
         TERRAFORM_DIR = 'Terraform'
-        REPO_URL = 'https://github.com/DevCloud-Solutions/AI-Application.git' // GitHub repo URL'nizi buraya yazın
-        WORKSPACE_DIR = 'test' // Workspace'inizi temsil eder
+        GIT_REPO_URL = 'https://github.com/DevCloud-Solutions/AI-Application.git'  // GitHub repository URL
     }
 
     stages {
+        // Checkout Code from GitHub
         stage('Checkout Code') {
             steps {
+                checkout([$class: 'GitSCM', branches: [[name: '*/dev']], userRemoteConfigs: [[url: GIT_REPO_URL]]])
+            }
+        }
+        
+        // Debug stage: Check current directory and list files
+        stage('Debug Workspace') {
+            steps {
                 script {
-                    echo 'Cloning repository...'
-                    checkout([$class: 'GitSCM', branches: [[name: '*/dev']],
-                              userRemoteConfigs: [[url: env.REPO_URL]]])
+                    echo 'Checking workspace structure...'
+                    sh 'pwd'  // Current directory
+                    sh 'ls -l' // List files in the current directory
+                    sh 'ls -l Ansible/playbooks/' // List playbooks directory
                 }
             }
         }
@@ -60,78 +68,66 @@ pipeline {
             }
         }
 
+        // Generate Dynamic Ansible Inventory
         stage('Generate Dynamic Ansible Inventory') {
             steps {
-                dir(env.WORKSPACE_DIR) {
+                dir("${env.WORKSPACE}") { // Ensure we are in the workspace directory
                     script {
                         echo 'Generating dynamic Ansible inventory...'
-                        sh '''
-                            terraform output -raw master_public_ip > master_ip.txt
-                            terraform output -raw workerone_public_ip > workerone_ip.txt
-                            terraform output -raw workertwo_public_ip > workertwo_ip.txt
-
-                            python3 dynamic_inventory.py
-                        '''
+                        def masterIP = sh(script: 'terraform output -raw master_public_ip', returnStdout: true).trim()
+                        def workerOneIP = sh(script: 'terraform output -raw workerone_public_ip', returnStdout: true).trim()
+                        def workerTwoIP = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
+                        
+                        writeFile file: 'dynamic_inventory.py', text: """
+import json
+inventory = {
+    "master": {"hosts": ["${masterIP}"], "vars": {"ansible_user": "ec2-user"}},
+    "workers": {"hosts": ["${workerOneIP}", "${workerTwoIP}"], "vars": {"ansible_user": "ec2-user"}}
+}
+print(json.dumps(inventory, indent=4))
+"""
+                        sh 'chmod +x dynamic_inventory.py'
+                        sh 'python3 dynamic_inventory.py'
                     }
                 }
             }
         }
-
+        
+        // Run Ansible Playbooks
         stage('Run Ansible Playbooks') {
             steps {
-                sshagent(['ec2-user']) {
-                    dir(env.WORKSPACE_DIR) {
-                        script {
-                            echo 'Running Ansible playbooks...'
-                            sh '''
-                                python3 dynamic_inventory.py
-                                ls -l Ansible/playbooks/  # Doğru dosyaların olduğundan emin olun
-                                ansible-playbook -i dynamic_inventory.py Ansible/playbooks/master_setup.yml
-                            '''
-                        }
-                    }
+                script {
+                    sh 'ansible-playbook -i dynamic_inventory.py Ansible/playbooks/master_setup.yml'
                 }
             }
         }
 
+        // Approve Destroy Stage (optional)
         stage('Approve Destroy') {
             steps {
-                script {
-                    echo 'Waiting for approval to destroy infrastructure...'
-                    input message: 'Approve Terraform destroy?', ok: 'Destroy'
-                }
+                input 'Do you approve destroying the resources?'
             }
         }
-
+        
+        // Terraform Destroy (optional)
         stage('Terraform Destroy') {
             steps {
-                dir(env.WORKSPACE_DIR) {
-                    script {
-                        echo 'Destroying infrastructure...'
-                        sh 'terraform destroy -auto-approve'
-                    }
-                }
+                sh 'terraform destroy -auto-approve'
             }
         }
+        
     }
-
+    
     post {
         always {
             script {
                 echo 'Cleaning up workspace...'
-                deleteDir()
+                deleteDir() // Clean up workspace
             }
         }
-
         failure {
             script {
                 echo 'Pipeline failed. Check the logs for details.'
-            }
-        }
-
-        success {
-            script {
-                echo 'Pipeline completed successfully.'
             }
         }
     }
