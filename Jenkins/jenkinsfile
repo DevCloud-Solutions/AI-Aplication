@@ -51,33 +51,29 @@ pipeline {
                 def workertwo_ip = sh(script: 'terraform output -raw workertwo_public_ip', returnStdout: true).trim()
 
                 // Ansible dizinine dinamik inventory yazmak için WORKSPACE yolunu kullanıyoruz
-                def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+                def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.sh"
 
-                // Dinamik envanteri oluşturuyoruz
+                // Dinamik envanteri oluşturuyoruz (bash script formatında)
                 writeFile file: ansible_inventory_path, text: """
-#!/usr/bin/env python3
-import json
+#!/bin/bash
 
-def get_inventory():
-    inventory = {
-        "all": {
-            "children": {
-                "master": {
-                    "hosts": ["${master_ip}"]
-                },
-                "workers": {
-                    "hosts": ["${workerone_ip}", "${workertwo_ip}"]
-                }
-            },
-            "vars": {
-                "ansible_user": "ec2-user"
-            }
-        }
+cat <<EOF
+{
+  "all": {
+    "children": {
+      "master": {
+        "hosts": ["${master_ip}"]
+      },
+      "workers": {
+        "hosts": ["${workerone_ip}", "${workertwo_ip}"]
+      }
+    },
+    "vars": {
+      "ansible_user": "ec2-user"
     }
-    print(json.dumps(inventory))
-
-if __name__ == "__main__":
-    get_inventory()
+  }
+}
+EOF
 """
                 // Dosyaya çalıştırma izni ver
                 sh "chmod +x ${ansible_inventory_path}"
@@ -92,7 +88,7 @@ stage('Run Ansible Playbooks') {
             dir("${TERRAFORM_DIR}") {
                 script {
                     // Dinamik envanter dosyasının doğru yolunu kullanıyoruz
-                    def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.py"
+                    def ansible_inventory_path = "${WORKSPACE}/Ansible/inventory/dynamic_inventory.sh"
 
                     // Playbook dosyasının bulunduğu dizini kontrol et
                     sh "ls -l ${WORKSPACE}/Ansible/playbooks/"
@@ -105,9 +101,6 @@ stage('Run Ansible Playbooks') {
         }
     }
 }
-
-
-
 
 
         stage('Approve Destroy') {
