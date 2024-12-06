@@ -57,7 +57,6 @@ pipeline {
                 writeFile file: ansible_inventory_path, text: """
 #!/bin/bash
 
-if [ "$1" == "--list" ]; then
 cat <<EOF
 {
   "all": {
@@ -75,10 +74,6 @@ cat <<EOF
   }
 }
 EOF
-else
-  echo "{}"
-fi
-
 """
                 // Dosyaya çalıştırma izni ver
                 sh "chmod +x ${ansible_inventory_path}"
